@@ -28,7 +28,7 @@ __global__ void scale(TensorType A) {
    for(; i < A.extent(0); i += gridDim.x * blockDim.x) {
       auto rt = slice(A, i);
       for(auto& x : rt) {
-         x *= 10;
+         x *= 1000;
       }
    }
 }
@@ -38,19 +38,18 @@ int main() {
    const auto ext = Extents<4>(8, 2, 2, 2);
    Tensor<int, 4> A(ext), B(ext);
    CudaTensor<int, 4> A_gpu, B_gpu, C_gpu;
-
-   std::iota(A.begin(), A.end(), 0);
-   std::iota(B.begin(), B.end(), 0);
-
    A_gpu.Allocate(ext);
    B_gpu.Allocate(ext);
    C_gpu.Allocate(ext);
+
+   std::iota(A.begin(), A.end(), 0);
+   std::iota(B.begin(), B.end(), 0);
 
    A_gpu.copy_sync(A);
    B_gpu.copy_sync(B);
 
    compute<<<2, 2>>>(A_gpu, B_gpu, C_gpu);
-   scale<<<2, 2>>>(slice(C_gpu, 0));
+   scale<<<2, 2>>>(block(C_gpu, 0, 3));
 
    A.copy_sync(C_gpu);
 

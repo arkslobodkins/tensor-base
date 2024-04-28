@@ -98,5 +98,32 @@ __host__ __device__ auto slice(TensorType&& A, Ints... indexes) {
 }
 
 
+template <typename TensorType>
+__host__ __device__ auto block(TensorType&& A, index_t first, index_t last) {
+   using T = typename std::remove_reference_t<TensorType>::value_type;
+   static_assert(std::is_lvalue_reference_v<TensorType>);
+
+   // validate first and last
+   constexpr auto dim = A.dimension();
+   Extents<dim> sub_ext = A.extents();
+   sub_ext[0] = last - first + 1;
+
+   auto offset = A.template offset_of<dim>(first);
+   if constexpr(std::is_const_v<std::remove_reference_t<TensorType>>) {
+      if constexpr(A.host_type()) {
+         return ConstTensorSlice<T, dim>(A.data() + offset, sub_ext);
+      } else {
+         return ConstCudaTensorSlice<T, dim>(A.data() + offset, sub_ext);
+      }
+   } else {
+      if constexpr(A.host_type()) {
+         return TensorSlice<T, dim>(A.data() + offset, sub_ext);
+      } else {
+         return CudaTensorSlice<T, dim>(A.data() + offset, sub_ext);
+      }
+   }
+}
+
+
 }  // namespace tnb
 
