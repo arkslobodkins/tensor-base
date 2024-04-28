@@ -7,7 +7,7 @@ using namespace tnb;
 
 
 template <typename T>
-__global__ void fill(CudaMatrix<T> A) {
+__global__ void row_iota(CudaMatrix<T> A) {
    auto rid = blockDim.x * blockIdx.x + threadIdx.x;
    for(; rid < A.extent(0); rid += gridDim.x * blockDim.x) {
       auto row = lslice(A, rid);
@@ -21,7 +21,7 @@ __global__ void fill(CudaMatrix<T> A) {
 int main() {
    CudaMatrix<float> A;
    A.Allocate(16, 8);
-   fill<<<4, 4>>>(A);
+   row_iota<<<4, 4>>>(A);
    std::cout << A << std::endl;
    A.Free();
 
