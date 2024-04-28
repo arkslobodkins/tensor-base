@@ -155,6 +155,12 @@ public:
    }
 
 
+   __host__ __device__ bool empty() const {
+      validate_host_type();
+      return size();
+   }
+
+
    __host__ __device__ cnd_ptr_t begin() {
       validate_host_device_type();
       return data_;
