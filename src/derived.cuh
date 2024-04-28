@@ -57,7 +57,9 @@ class Tensor : public LinearBase<T, dim, true> {
 public:
    explicit Tensor(const Extents<dim>& ext) {
       ext_ = ext;
-      data_ = new T[this->size()];
+      if(this->size()) {
+         data_ = new T[this->size()];
+      }
    }
 
 
@@ -128,7 +130,9 @@ public:
 
    __host__ void Allocate(const Extents<dim>& ext) {
       ext_ = {ext};
-      ASSERT_CUDA_SUCCESS(cudaMalloc(&data_, this->size() * sizeof(T)));
+      if(this->size()) {
+         ASSERT_CUDA_SUCCESS(cudaMalloc(&data_, this->size() * sizeof(T)));
+      }
    }
 
 
@@ -141,6 +145,7 @@ public:
    __host__ void Free() {
       ASSERT_CUDA_SUCCESS(cudaFree(data_));
       ext_ = Extents<dim>{};
+      data_ = nullptr;
    }
 
 
