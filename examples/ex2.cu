@@ -10,7 +10,7 @@ template <typename T>
 __global__ void fill(CudaMatrix<T> A) {
    auto rid = blockDim.x * blockIdx.x + threadIdx.x;
    for(; rid < A.extent(0); rid += gridDim.x * blockDim.x) {
-      auto row = slice(A, rid);
+      auto row = lslice(A, rid);
       for(auto& x : row) {
          x = rid;
       }

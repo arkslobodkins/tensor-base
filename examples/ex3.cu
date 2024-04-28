@@ -26,7 +26,7 @@ template <typename TensorType>
 __global__ void scale(TensorType A) {
    index_t i = blockDim.x * blockIdx.x + threadIdx.x;
    for(; i < A.extent(0); i += gridDim.x * blockDim.x) {
-      auto rt = slice(A, i);
+      auto rt = lslice(A, i);
       for(auto& x : rt) {
          x *= 1000;
       }
@@ -49,7 +49,7 @@ int main() {
    B_gpu.copy_sync(B);
 
    compute<<<2, 2>>>(A_gpu, B_gpu, C_gpu);
-   scale<<<2, 2>>>(block(C_gpu, 0, 3));
+   scale<<<2, 2>>>(lblock(C_gpu, 0, 3));
 
    A.copy_sync(C_gpu);
 

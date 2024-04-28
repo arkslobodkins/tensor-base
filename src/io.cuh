@@ -29,7 +29,7 @@ template <template <typename, index_t> class TensorType, typename T,
           std::enable_if_t<TensorType<T, 2>::host_type(), bool> = true>
 std::ostream& operator<<(std::ostream& os, const TensorType<T, 2>& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
-      os << slice(A, i);
+      os << lslice(A, i);
    }
    return os;
 }
@@ -40,7 +40,7 @@ template <template <typename, index_t> class TensorType, typename T,
 std::ostream& operator<<(std::ostream& os, const TensorType<T, 3>& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << "A(" << i << ", :, :) = " << std::endl;
-      os << slice(A, i);
+      os << lslice(A, i);
       if(i != A.extent(0) - 1) {
          os << std::endl;
       }
@@ -55,7 +55,7 @@ std::ostream& operator<<(std::ostream& os, const TensorType<T, 4>& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       for(index_t j = 0; j < A.extent(1); ++j) {
          os << "A(" << i << ", " << j << ", :, :) = " << std::endl;
-         os << slice(A, i, j);
+         os << lslice(A, i, j);
          if(j != A.extent(1) - 1) {
             os << std::endl;
          }
