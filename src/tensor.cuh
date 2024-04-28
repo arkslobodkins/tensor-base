@@ -6,4 +6,5 @@
 #include "derived.cuh"
 #include "io.cuh"
 #include "slice.cuh"
+#include "timer.cuh"
 

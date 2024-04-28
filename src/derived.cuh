@@ -81,6 +81,7 @@ public:
 
 
    Tensor& operator=(const Tensor& A) {
+      static_assert(this->dimension() == A.dimension());
       assert(same_extents(*this, A));
       if(this != &A) {
          std::copy(A.begin(), A.end(), this->begin());
@@ -90,6 +91,7 @@ public:
 
 
    Tensor& operator=(Tensor&& A) noexcept {
+      static_assert(this->dimension() == A.dimension());
       assert(same_extents(*this, A));
       if(this != &A) {
          delete[] data_;

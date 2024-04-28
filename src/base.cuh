@@ -83,7 +83,9 @@ public:
 
 template <typename TensorType1, typename TensorType2>
 __host__ __device__ bool same_extents(const TensorType1& A, const TensorType2& B) {
-   assert(A.dimension() == B.dimension());
+   if(A.dimension() != B.dimension()) {
+      return false;
+   }
    for(index_t d = 0; d < A.dimension(); ++d) {
       if(A.extent(d) != B.extent(d)) {
          return false;
@@ -93,44 +95,41 @@ __host__ __device__ bool same_extents(const TensorType1& A, const TensorType2& B
 }
 
 
-template <typename T, index_t dim, bool is_host_t>
+template <typename T, index_t dim, bool is_host_t, bool is_const_ptr = false>
 class LinearBase {
+private:
+   using cnd_ptr_t = std::conditional_t<is_const_ptr, const T*, T*>;
+   using cnd_ref_t = std::conditional_t<is_const_ptr, const T&, T&>;
+
+   using const_ptr_t = const T*;
+   using const_ref_t = const T&;
+
 protected:
    Extents<dim> ext_{};
-   T* data_{};
+   cnd_ptr_t data_{};
 
-
-   static constexpr void __host__ __device__ validate_host_type() {
+   static void __host__ __device__ validate_host_type() {
 #ifdef __CUDA_ARCH__
       if constexpr(is_host_t) {
-         constexpr auto Detect = []() {
-            __device__ constexpr void not_callable_on_device_error();
-            not_callable_on_device_error();
-         };
-         Detect();
+         __device__ void not_callable_on_device_error();
+         not_callable_on_device_error();
       }
 #endif
    }
 
-
-   static constexpr void __host__ __device__ validate_device_type() {
+   static void __host__ __device__ validate_device_type() {
 #ifndef __CUDA_ARCH__
       if constexpr(!is_host_t) {
-         constexpr auto Detect = []() {
-            __host__ constexpr void not_callable_on_host_error();
-            not_callable_on_host_error();
-         };
-         Detect();
+         __host__ void not_callable_on_host_error();
+         not_callable_on_host_error();
       }
 #endif
    }
 
-
-   static constexpr void __host__ __device__ validate_host_device_type() {
+   static void __host__ __device__ validate_host_device_type() {
       validate_host_type();
       validate_device_type();
    }
-
 
 public:
    using size_type = index_t;
@@ -144,60 +143,67 @@ public:
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   __host__ __device__ T* data() {
+   __host__ __device__ cnd_ptr_t data() {
       validate_host_type();
       return data_;
    }
 
 
-   __host__ __device__ const T* data() const {
+   __host__ __device__ const_ptr_t data() const {
       validate_host_type();
       return data_;
    }
 
 
-   __host__ __device__ T* begin() {
-      validate_host_type();
+   __host__ __device__ cnd_ptr_t begin() {
+      validate_host_device_type();
       return data_;
    }
 
 
-   __host__ __device__ const T* begin() const {
-      validate_host_type();
+   __host__ __device__ const_ptr_t begin() const {
+      validate_host_device_type();
       return data_;
    }
 
 
-   __host__ __device__ const T* cbegin() const {
+   __host__ __device__ const_ptr_t cbegin() const {
       return begin();
    }
 
-   __host__ __device__ T* end() {
-      validate_host_type();
+
+   __host__ __device__ cnd_ptr_t end() {
+      validate_host_device_type();
       return data_ + size();
    }
 
 
-   __host__ __device__ const T* end() const {
-      validate_host_type();
+   __host__ __device__ const_ptr_t end() const {
+      validate_host_device_type();
       return data_ + size();
    }
 
 
-   __host__ __device__ const T* cend() const {
+   __host__ __device__ const_ptr_t cend() const {
       return end();
    }
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   __host__ __device__ static constexpr bool is_host_type() {
-      validate_host_type();
+   __host__ __device__ static constexpr bool host_type() {
+      // validate_host_type();
       return is_host_t;
    }
 
 
+   __host__ __device__ static constexpr bool device_type() {
+      // validate_host_type();
+      return !is_host_t;
+   }
+
+
    __host__ __device__ static constexpr index_t dimension() {
-      validate_host_type();
+      // validate_host_type();
       return dim;
    }
 
@@ -250,7 +256,7 @@ public:
 
 
    template <typename... Ints>
-   __host__ __device__ T& operator()(Ints... indexes) {
+   __host__ __device__ cnd_ref_t operator()(Ints... indexes) {
       validate_host_device_type();
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
@@ -258,25 +264,30 @@ public:
 
 
    template <typename... Ints>
-   __host__ __device__ const T& operator()(Ints... indexes) const {
+   __host__ __device__ const_ref_t operator()(Ints... indexes) const {
       validate_host_device_type();
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
    }
 
+
    template <typename TensorType>
    __host__ void copy_sync(const TensorType& A) {
       static_assert(dimension() == A.dimension());
       assert(same_extents(*this, A));
-      if constexpr(!this->is_host_type() && !A.is_host_type()) {
-         ASSERT_CUDA_SUCCESS(
-             cudaMemcpy(this->data(), A.data(), this->size() * sizeof(T), cudaMemcpyDeviceToDevice));
-      } else if constexpr(this->is_host_type() && !A.is_host_type()) {
-         ASSERT_CUDA_SUCCESS(
-             cudaMemcpy(this->data(), A.data(), this->size() * sizeof(T), cudaMemcpyDeviceToHost));
-      } else if constexpr(!this->is_host_type() && A.is_host_type()) {
-         ASSERT_CUDA_SUCCESS(
-             cudaMemcpy(this->data(), A.data(), this->size() * sizeof(T), cudaMemcpyHostToDevice));
+
+      auto nbytes = size() * sizeof(T);
+      if constexpr(device_type() && A.device_type()) {
+         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice));
+
+      } else if constexpr(host_type() && A.device_type()) {
+         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToHost));
+
+      } else if constexpr(device_type() && A.host_type()) {
+         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToDevice));
+
+      } else {
+         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToHost));
       }
    }
 };
