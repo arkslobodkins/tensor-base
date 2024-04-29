@@ -19,8 +19,8 @@ class TensorSliceBase : public LinearBase<T, dim, is_host_t, is_const_ptr> {
 public:
    __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
                                                 const Extents<dim>& ext) {
-      assert(ext.valid());
       this->validate_host_type();
+      assert(ext.valid());
       data_ = data;
       ext_ = ext;
    }
