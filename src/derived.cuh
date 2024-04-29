@@ -6,7 +6,10 @@
 #include <curand.h>
 
 #include <algorithm>
+#include <cassert>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <type_traits>
 #include <utility>
 
@@ -145,7 +148,7 @@ public:
    __host__ void Free() {
       ASSERT_CUDA_SUCCESS(cudaFree(data_));
       ext_ = Extents<dim>{};
-      data_ = nullptr;
+      // not resetting data to null
    }
 
 

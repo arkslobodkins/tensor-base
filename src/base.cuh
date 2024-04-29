@@ -28,6 +28,20 @@
    static_assert(sizeof...(Ints) == dim, "index dimension must be equal to the dimension of the tensor")
 
 
+#ifndef NDEBUG
+#define TENSOR_VALIDATE_HOST_DEBUG validate_host_type()
+#else
+#define TENSOR_VALIDATE_HOST_DEBUG
+#endif
+
+
+#ifndef NDEBUG
+#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG validate_host_device_type()
+#else
+#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG
+#endif
+
+
 namespace tnb {
 
 
@@ -44,7 +58,15 @@ __host__ __device__ constexpr bool is_actually_integer() {
 
 
 template <index_t dim>
-struct Extents {
+struct NonZeroTraits {
+   __host__ __device__ NonZeroTraits() {
+      static_assert(dim > 0);
+   }
+};
+
+
+template <index_t dim>
+struct Extents : private NonZeroTraits<dim> {
 private:
    index_t x[dim]{};
 
@@ -81,17 +103,22 @@ public:
 };
 
 
-template <typename TensorType1, typename TensorType2>
-__host__ __device__ bool same_extents(const TensorType1& A, const TensorType2& B) {
-   if(A.dimension() != B.dimension()) {
+template <typename First, typename Second, typename... TensorTypes>
+__host__ __device__ bool same_extents(const First& first, const Second& second,
+                                      const TensorTypes&... tensors) {
+   if(first.dimension() != second.dimension()) {
       return false;
    }
-   for(index_t d = 0; d < A.dimension(); ++d) {
-      if(A.extent(d) != B.extent(d)) {
+   for(index_t d = 0; d < first.dimension(); ++d) {
+      if(first.extent(d) != second.extent(d)) {
          return false;
       }
    }
-   return true;
+   if constexpr(sizeof...(TensorTypes) == 0) {
+      return true;
+   } else {
+      return same_extents(second, tensors...);
+   }
 }
 
 
@@ -144,32 +171,32 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ cnd_ptr_t data() {
-      validate_host_type();
-      return data_;
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return size() == 0 ? nullptr : data_;
    }
 
 
    __host__ __device__ const_ptr_t data() const {
-      validate_host_type();
-      return data_;
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return size() == 0 ? nullptr : data_;
    }
 
 
    __host__ __device__ bool empty() const {
-      validate_host_type();
-      return size();
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return !size();
    }
 
 
    __host__ __device__ cnd_ptr_t begin() {
-      validate_host_device_type();
-      return data_;
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return data();
    }
 
 
    __host__ __device__ const_ptr_t begin() const {
-      validate_host_device_type();
-      return data_;
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return data();
    }
 
 
@@ -179,14 +206,14 @@ public:
 
 
    __host__ __device__ cnd_ptr_t end() {
-      validate_host_device_type();
-      return data_ + size();
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return data() + size();
    }
 
 
    __host__ __device__ const_ptr_t end() const {
-      validate_host_device_type();
-      return data_ + size();
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return data() + size();
    }
 
 
@@ -197,51 +224,48 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ static constexpr bool host_type() {
-      // validate_host_type();
       return is_host_t;
    }
 
 
    __host__ __device__ static constexpr bool device_type() {
-      // validate_host_type();
       return !is_host_t;
    }
 
 
    __host__ __device__ static constexpr index_t dimension() {
-      // validate_host_type();
       return dim;
    }
 
 
    __host__ __device__ index_t size() const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_.product_from(0);
    }
 
 
    __host__ __device__ index_t extent(index_t d) const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_[d];
    }
 
 
    __host__ __device__ Extents<dim> extents() const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_;
    }
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ bool valid_index(index_t i, index_t d) const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       return i > -1 && i < ext_[d];
    }
 
 
    template <index_t in_dim, typename First, typename... Ints>
    __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       static_assert(is_actually_integer<First>());
       assert(valid_index(first, in_dim - 1 - static_cast<index_t>(sizeof...(Ints))));
 
@@ -256,14 +280,14 @@ public:
 
    template <typename First, typename... Ints>
    __host__ __device__ index_t index_of(First first, Ints... indexes) const {
-      validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       return offset_of<dim, First, Ints...>(first, indexes...);
    }
 
 
    template <typename... Ints>
    __host__ __device__ cnd_ref_t operator()(Ints... indexes) {
-      validate_host_device_type();
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
    }
@@ -271,7 +295,7 @@ public:
 
    template <typename... Ints>
    __host__ __device__ const_ref_t operator()(Ints... indexes) const {
-      validate_host_device_type();
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
    }
