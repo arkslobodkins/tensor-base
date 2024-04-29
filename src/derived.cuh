@@ -59,6 +59,7 @@ template <typename T, index_t dim>
 class Tensor : public LinearBase<T, dim, true> {
 public:
    explicit Tensor(const Extents<dim>& ext) {
+      assert(ext.valid());
       ext_ = ext;
       if(this->size()) {
          data_ = new T[this->size()];
@@ -86,7 +87,6 @@ public:
 
 
    Tensor& operator=(const Tensor& A) {
-      static_assert(this->dimension() == A.dimension());
       assert(same_extents(*this, A));
       if(this != &A) {
          std::copy(A.begin(), A.end(), this->begin());
@@ -96,7 +96,6 @@ public:
 
 
    Tensor& operator=(Tensor&& A) noexcept {
-      static_assert(this->dimension() == A.dimension());
       assert(same_extents(*this, A));
       if(this != &A) {
          delete[] data_;
@@ -132,6 +131,7 @@ public:
 
 
    __host__ void Allocate(const Extents<dim>& ext) {
+      assert(ext.valid());
       ext_ = {ext};
       if(this->size()) {
          ASSERT_CUDA_SUCCESS(cudaMalloc(&data_, this->size() * sizeof(T)));

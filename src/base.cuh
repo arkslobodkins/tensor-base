@@ -68,11 +68,11 @@ struct NonZeroTraits {
 template <index_t dim>
 struct Extents : private NonZeroTraits<dim> {
 private:
-   index_t x[dim]{};
+   index_t x_[dim]{};
 
 public:
    template <typename... Ints>
-   __host__ __device__ Extents(Ints... ext) : x{ext...} {
+   __host__ __device__ Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
       static_assert(static_cast<index_t>(sizeof...(ext)) == dim);
       assert((... && (ext != 0)) || (... && (ext == 0)));  // either all zero or nonzero
@@ -84,21 +84,34 @@ public:
 
    __host__ __device__ const index_t& operator[](index_t d) const {
       assert(d > -1 && d < dim);
-      return x[d];
+      return x_[d];
    }
 
    __host__ __device__ index_t& operator[](index_t d) {
       assert(d > -1 && d < dim);
-      return x[d];
+      return x_[d];
    }
 
    __host__ __device__ index_t product_from(index_t n) const {
       assert(n > -1 && n <= dim);  // n = dim is allowed
       index_t p = 1;
       for(index_t d = n; d < dim; ++d) {
-         p *= x[d];
+         p *= x_[d];
       }
       return p;
+   }
+
+   __host__ __device__ bool valid() const {
+      for(index_t d = 0; d < dim; ++d)
+         if(x_[d] < 0)
+            return false;
+
+      bool cnd = (x_[0] == 0);
+      for(index_t d = 1; d < dim; ++d)
+         if((x_[d] == 0) ^ cnd)
+            return false;
+
+      return true;
    }
 };
 
@@ -301,9 +314,8 @@ public:
    }
 
 
-   template <typename TensorType>
-   __host__ void copy_sync(const TensorType& A) {
-      static_assert(dimension() == A.dimension());
+   template <template<typename, index_t> class TensorType>
+   __host__ void copy_sync(const TensorType<T, dim>& A) {
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
