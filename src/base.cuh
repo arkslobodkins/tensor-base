@@ -29,7 +29,7 @@
 
 
 #ifndef NDEBUG
-#define TENSOR_VALIDATE_HOST_DEBUG validate_host_type()
+#define TENSOR_VALIDATE_HOST_DEBUG this->validate_host_type()
 #else
 #define TENSOR_VALIDATE_HOST_DEBUG
 #endif

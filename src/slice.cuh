@@ -19,14 +19,14 @@ class TensorSliceBase : public LinearBase<T, dim, is_host_t, is_const_ptr> {
 public:
    __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
                                                 const Extents<dim>& ext) {
-      this->validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       assert(ext.valid());
       data_ = data;
       ext_ = ext;
    }
 
    __host__ __device__ TensorSliceBase(const TensorSliceBase& A) {
-      this->validate_host_type();
+      TENSOR_VALIDATE_HOST_DEBUG;
       data_ = A.data_;
       ext_ = A.ext_;
    }
