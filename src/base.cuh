@@ -329,6 +329,12 @@ public:
          ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToHost));
       }
    }
+
+
+   __host__ void memset_sync(int val) {
+      static_assert(device_type());
+      ASSERT_CUDA_SUCCESS(cudaMemset(data(), val, size() * sizeof(T)));
+   }
 };
 
 
