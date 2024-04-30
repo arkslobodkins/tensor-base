@@ -6,6 +6,7 @@
 
 #include <cuda_runtime.h>
 
+#include <cstring>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -69,7 +70,6 @@ public:
    __host__ __device__ Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
       static_assert(static_cast<index_t>(sizeof...(ext)) == dim);
-      // assert((... && (ext != 0)) || (... && (ext == 0)));  // either all zero or nonzero
    }
 
    explicit Extents() = default;
@@ -94,22 +94,6 @@ public:
       }
       return p;
    }
-
-   __host__ __device__ bool valid() const {
-      for(index_t d = 0; d < dim; ++d) {
-         if(x_[d] < 0) {
-            return false;
-         }
-      }
-
-      bool cnd = (x_[0] == 0);
-      for(index_t d = 1; d < dim; ++d) {
-         if((x_[d] == 0) ^ cnd) {
-            return false;
-         }
-      }
-      return true;
-   }
 };
 
 
@@ -129,6 +113,31 @@ __host__ __device__ bool same_extents(const First& first, const Second& second,
    } else {
       return same_extents(second, tensors...);
    }
+}
+
+
+template <typename... Ints>
+__host__ __device__ bool valid_extents(Ints... ext) {
+   // non-negative and either all zero or nonzero
+   return (... && (ext > -1)) && ((... && (ext != 0)) || (... && (ext == 0)));
+}
+
+
+template <index_t dim>
+__host__ __device__ bool valid_extents(const Extents<dim>& ext) {
+   for(index_t d = 0; d < dim; ++d) {
+      if(ext[d] < 0) {
+         return false;
+      }
+   }
+
+   bool cnd = (ext[0] == 0);
+   for(index_t d = 1; d < dim; ++d) {
+      if((ext[d] == 0) ^ cnd) {
+         return false;
+      }
+   }
+   return true;
 }
 
 
@@ -311,6 +320,24 @@ public:
    }
 
 
+   template <typename Int>
+   __host__ __device__ cnd_ref_t operator[](Int i) {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      static_assert(is_actually_integer<Int>());
+      assert(i > -1 && i < size());
+      return data_[i];
+   }
+
+
+   template <typename Int>
+   __host__ __device__ const_ref_t operator[](Int i) const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      static_assert(is_actually_integer<Int>());
+      assert(i > -1 && i < size());
+      return data_[i];
+   }
+
+
    template <template <typename, index_t> class TensorType>
    __host__ void copy_sync(const TensorType<T, dim>& A) {
       assert(same_extents(*this, A));
@@ -332,8 +359,11 @@ public:
 
 
    __host__ void memset_sync(int val) {
-      static_assert(device_type());
-      ASSERT_CUDA_SUCCESS(cudaMemset(data(), val, size() * sizeof(T)));
+      if constexpr(device_type()) {
+         ASSERT_CUDA_SUCCESS(cudaMemset(data(), val, size() * sizeof(T)));
+      } else {
+         std::memset(data(), val, size() * sizeof(T));
+      }
    }
 };
 

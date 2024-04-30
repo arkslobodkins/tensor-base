@@ -59,7 +59,7 @@ template <typename T, index_t dim>
 class Tensor : public LinearBase<T, dim, true> {
 public:
    explicit Tensor(const Extents<dim>& ext) {
-      assert(ext.valid());
+      assert(valid_extents(ext));
       ext_ = ext;
       if(this->size()) {
          data_ = new T[this->size()];
@@ -131,7 +131,7 @@ public:
 
 
    __host__ void Allocate(const Extents<dim>& ext) {
-      assert(ext.valid());
+      assert(valid_extents(ext));
       ext_ = {ext};
       if(this->size()) {
          ASSERT_CUDA_SUCCESS(cudaMalloc(&data_, this->size() * sizeof(T)));
