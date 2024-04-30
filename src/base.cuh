@@ -58,15 +58,9 @@ __host__ __device__ constexpr bool is_actually_integer() {
 
 
 template <index_t dim>
-struct NonZeroTraits {
-   __host__ __device__ NonZeroTraits() {
-      static_assert(dim > 0);
-   }
-};
+struct Extents {
+   static_assert(dim > 0);
 
-
-template <index_t dim>
-struct Extents : private NonZeroTraits<dim> {
 private:
    index_t x_[dim]{};
 
@@ -75,7 +69,7 @@ public:
    __host__ __device__ Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
       static_assert(static_cast<index_t>(sizeof...(ext)) == dim);
-      assert((... && (ext != 0)) || (... && (ext == 0)));  // either all zero or nonzero
+      // assert((... && (ext != 0)) || (... && (ext == 0)));  // either all zero or nonzero
    }
 
    explicit Extents() = default;
@@ -102,15 +96,18 @@ public:
    }
 
    __host__ __device__ bool valid() const {
-      for(index_t d = 0; d < dim; ++d)
-         if(x_[d] < 0)
+      for(index_t d = 0; d < dim; ++d) {
+         if(x_[d] < 0) {
             return false;
+         }
+      }
 
       bool cnd = (x_[0] == 0);
-      for(index_t d = 1; d < dim; ++d)
-         if((x_[d] == 0) ^ cnd)
+      for(index_t d = 1; d < dim; ++d) {
+         if((x_[d] == 0) ^ cnd) {
             return false;
-
+         }
+      }
       return true;
    }
 };
@@ -148,7 +145,7 @@ protected:
    Extents<dim> ext_{};
    cnd_ptr_t data_{};
 
-   static void __host__ __device__ validate_host_type() {
+   __host__ __device__ static void validate_host_type() {
 #ifdef __CUDA_ARCH__
       if constexpr(is_host_t) {
          __device__ void not_callable_on_device_error();
@@ -157,7 +154,7 @@ protected:
 #endif
    }
 
-   static void __host__ __device__ validate_device_type() {
+   __host__ __device__ static void validate_device_type() {
 #ifndef __CUDA_ARCH__
       if constexpr(!is_host_t) {
          __host__ void not_callable_on_host_error();
@@ -166,7 +163,7 @@ protected:
 #endif
    }
 
-   static void __host__ __device__ validate_host_device_type() {
+   __host__ __device__ static void validate_host_device_type() {
       validate_host_type();
       validate_device_type();
    }
@@ -314,7 +311,7 @@ public:
    }
 
 
-   template <template<typename, index_t> class TensorType>
+   template <template <typename, index_t> class TensorType>
    __host__ void copy_sync(const TensorType<T, dim>& A) {
       assert(same_extents(*this, A));
 
