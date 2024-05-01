@@ -20,7 +20,7 @@ public:
    __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
                                                 const Extents<dim>& ext) {
       TENSOR_VALIDATE_HOST_DEBUG;
-      assert(this->valid_extents(ext));
+      assert(valid_extents(ext));
       data_ = data;
       ext_ = ext;
    }

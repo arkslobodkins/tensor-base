@@ -1,6 +1,6 @@
 all : ex1 ex2 ex3
 
-debug = 0
+debug = 1
 
 CXXFLAGS = -std=c++17 -O3
 ifeq ($(debug), 0)
