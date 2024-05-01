@@ -68,7 +68,6 @@ public:
 };
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////
 namespace internal {
 template <typename TensorType, index_t in_dim>
 __host__ __device__ auto slice_data(TensorType&& A, const Extents<in_dim>& ext, index_t offset) {
@@ -121,6 +120,27 @@ __host__ __device__ auto lblock(TensorType&& A, index_t first, index_t last) {
 
    auto offset = A.template offset_of<dim>(first);
    return internal::slice_data(std::forward<TensorType>(A), sub_ext, offset);
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, index_t dim>
+__host__ auto attach_host(T* data, const Extents<dim>& ext) {
+   if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
+      return ConstTensorSlice<T, dim>(data, ext);
+   } else {
+      return TensorSlice<T, dim>(data, ext);
+   }
+}
+
+
+template <typename T, index_t dim>
+__host__ __device__ auto attach_device(T* data, const Extents<dim>& ext) {
+   if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
+      return ConstCudaTensorSlice<T, dim>(data, ext);
+   } else {
+      return CudaTensorSlice<T, dim>(data, ext);
+   }
 }
 
 
