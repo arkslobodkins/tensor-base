@@ -93,7 +93,7 @@ __host__ __device__ auto slice_data(TensorType&& A, const Extents<in_dim>& ext, 
 template <typename TensorType, typename... Ints>
 __host__ __device__ auto lslice(TensorType&& A, Ints... indexes) {
    static_assert(std::is_lvalue_reference_v<TensorType>);
-   constexpr auto out_dim = static_cast<index_t>(sizeof...(Ints));
+   constexpr auto out_dim = SizeOfCast<Ints...>();
    constexpr auto in_dim = A.dimension() - out_dim;
    static_assert(out_dim < A.dimension());
    static_assert(in_dim > 0);
@@ -120,6 +120,12 @@ __host__ __device__ auto lblock(TensorType&& A, index_t first, index_t last) {
 
    auto offset = A.template offset_of<dim>(first);
    return internal::slice_data(std::forward<TensorType>(A), sub_ext, offset);
+}
+
+
+template <typename TensorType>
+__host__ __device__ auto lblock(TensorType&& A, index_t first) {
+   return lblock(std::forward<TensorType>(A), first, first);
 }
 
 

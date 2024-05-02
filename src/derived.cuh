@@ -110,6 +110,17 @@ public:
    }
 
 
+   void resize(const Extents<dim>& ext) {
+      assert(valid_extents(ext));
+      delete[] data_; // avoid double free
+      data_ = nullptr;
+      if(ext.size()) {
+         data_ = new double[ext.size()];
+      }
+      ext_ = ext;
+   }
+
+
 private:
    using LinearBase<T, dim, true>::ext_;
    using LinearBase<T, dim, true>::data_;
@@ -134,7 +145,7 @@ public:
       assert(valid_extents(ext));
       ext_ = {ext};
       if(this->size()) {
-         ASSERT_CUDA_SUCCESS(cudaMalloc(&data_, this->size() * sizeof(T)));
+         ASSERT_CUDA(cudaMalloc(&data_, this->size() * sizeof(T)));
       }
    }
 
@@ -146,9 +157,17 @@ public:
 
 
    __host__ void Free() {
-      ASSERT_CUDA_SUCCESS(cudaFree(data_));
+      ASSERT_CUDA(cudaFree(data_));
       ext_ = Extents<dim>{};
       // not resetting data to null
+   }
+
+
+   void resize(const Extents<dim>& ext) {
+      assert(valid_extents(ext));
+      ASSERT_CUDA(cudaFree(data_));
+      data_ = nullptr;
+      Allocate(ext);
    }
 
 

@@ -6,15 +6,15 @@
 
 #include <cuda_runtime.h>
 
-#include <cstring>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <type_traits>
 
 
-#define ASSERT_CUDA_SUCCESS(cudaCall)                                                                   \
+#define ASSERT_CUDA(cudaCall)                                                                   \
    do {                                                                                                 \
       cudaError_t error = cudaCall;                                                                     \
       if(error != cudaSuccess) {                                                                        \
@@ -49,6 +49,12 @@ namespace tnb {
 using index_t = long int;
 
 
+template <typename... Types>
+__host__ __device__ constexpr index_t SizeOfCast() {
+   return static_cast<index_t>(sizeof...(Types));
+}
+
+
 template <typename T>
 __host__ __device__ constexpr bool is_actually_integer() {
    // not checking for char8_t, which is only available since C++20
@@ -69,19 +75,19 @@ public:
    template <typename... Ints>
    __host__ __device__ Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
-      static_assert(static_cast<index_t>(sizeof...(ext)) == dim);
+      static_assert(SizeOfCast<Ints...>() == dim);
    }
 
    explicit Extents() = default;
    Extents(const Extents&) = default;
    Extents& operator=(const Extents&) = default;
 
-   __host__ __device__ const index_t& operator[](index_t d) const {
+   __host__ __device__ index_t& operator[](index_t d) {
       assert(d > -1 && d < dim);
       return x_[d];
    }
 
-   __host__ __device__ index_t& operator[](index_t d) {
+   __host__ __device__ const index_t& operator[](index_t d) const {
       assert(d > -1 && d < dim);
       return x_[d];
    }
@@ -93,6 +99,10 @@ public:
          p *= x_[d];
       }
       return p;
+   }
+
+   __host__ __device__ index_t size() const {
+      return product_from(0);
    }
 };
 
@@ -259,7 +269,7 @@ public:
 
    __host__ __device__ index_t size() const {
       TENSOR_VALIDATE_HOST_DEBUG;
-      return ext_.product_from(0);
+      return ext_.size();
    }
 
 
@@ -286,12 +296,12 @@ public:
    __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
       TENSOR_VALIDATE_HOST_DEBUG;
       static_assert(is_actually_integer<First>());
-      assert(valid_index(first, in_dim - 1 - static_cast<index_t>(sizeof...(Ints))));
+      assert(valid_index(first, in_dim - 1 - SizeOfCast<Ints...>()));
 
       if constexpr(sizeof...(Ints) == 0) {
          return first * ext_.product_from(in_dim);
       } else {
-         return first * ext_.product_from(in_dim - static_cast<index_t>(sizeof...(Ints)))
+         return first * ext_.product_from(in_dim - SizeOfCast<Ints...>())
               + offset_of<in_dim, Ints...>(indexes...);
       }
    }
@@ -344,23 +354,23 @@ public:
 
       auto nbytes = size() * sizeof(T);
       if constexpr(device_type() && A.device_type()) {
-         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice));
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice));
 
       } else if constexpr(host_type() && A.device_type()) {
-         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToHost));
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToHost));
 
       } else if constexpr(device_type() && A.host_type()) {
-         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToDevice));
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToDevice));
 
       } else {
-         ASSERT_CUDA_SUCCESS(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToHost));
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToHost));
       }
    }
 
 
    __host__ void memset_sync(int val) {
       if constexpr(device_type()) {
-         ASSERT_CUDA_SUCCESS(cudaMemset(data(), val, size() * sizeof(T)));
+         ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));
       } else {
          std::memset(data(), val, size() * sizeof(T));
       }
