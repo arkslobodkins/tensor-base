@@ -2,7 +2,7 @@ all : ex1 ex2 ex3 ex4
 
 debug = 1
 
-CXXFLAGS = -std=c++17 -O3
+CXXFLAGS = --std=c++17 -O3
 ifeq ($(debug), 0)
 CXXFLAGS += -DNDEBUG
 endif
