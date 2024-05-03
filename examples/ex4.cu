@@ -66,7 +66,9 @@ int main() {
 
    assert(verify(tx, scalars));
 
-   // std::cout << tx << std::endl;
+   if(N <= 8) {
+      std::cout << tx << std::endl;
+   }
    ASSERT_CUDA(cudaFreeHost(x));
    ASSERT_CUDA(cudaDeviceReset());
 
