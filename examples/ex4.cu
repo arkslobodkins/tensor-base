@@ -51,8 +51,10 @@ int main() {
       ASSERT_CUDA(cudaMallocAsync(&x_gpu[i], nbytes, streams[i]));
       ASSERT_CUDA(cudaMemcpyAsync(x_gpu[i], lslice(tx, i).data(), nbytes, cudaMemcpyHostToDevice, streams[i]));
 
+      cudaEventRecord(events[2 * i], streams[i]);
       auto t_gpu = attach_device(x_gpu[i], sub_ext);  // using x_gpu[i] is safe
       add_scalar<<<8, 8, 0, streams[i]>>>(t_gpu, scalars[i]);
+      cudaEventRecord(events[2 * i + 1], streams[i]);
 
       ASSERT_CUDA(cudaMemcpyAsync(lslice(tx, i).data(), x_gpu[i], nbytes, cudaMemcpyDeviceToHost, streams[i]));
       ASSERT_CUDA(cudaFreeAsync(x_gpu[i], streams[i]));
@@ -62,7 +64,6 @@ int main() {
       ASSERT_CUDA(cudaStreamSynchronize(streams[i]));
       ASSERT_CUDA(cudaStreamDestroy(streams[i]));
    }
-   std::cout << t.wall_time() << std::endl;
 
    assert(verify(tx, scalars));
 
