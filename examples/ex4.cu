@@ -52,10 +52,9 @@ int main() {
       ASSERT_CUDA(cudaMemcpyAsync(x_gpu[i], x + i * sub_ext.size(), nbytes, cudaMemcpyHostToDevice, streams[i]));
 
       auto t_gpu = attach_device(x_gpu[i], sub_ext);
-      add_scalar<<<4, 4, 0, streams[i]>>>(t_gpu, scalars[i]);
+      add_scalar<<<8, 8, 0, streams[i]>>>(t_gpu, scalars[i]);
 
-      ASSERT_CUDA(
-          cudaMemcpyAsync(x + i * sub_ext.size(), x_gpu[i], nbytes, cudaMemcpyDeviceToHost, streams[i]));
+      ASSERT_CUDA(cudaMemcpyAsync(x + i * sub_ext.size(), x_gpu[i], nbytes, cudaMemcpyDeviceToHost, streams[i]));
       ASSERT_CUDA(cudaFreeAsync(x_gpu[i], streams[i]));
    }
 
