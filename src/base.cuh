@@ -377,6 +377,26 @@ public:
    }
 
 
+   template <template <typename, index_t> class TensorType>
+   __host__ void copy_async(const TensorType<T, dim>& A, cudaStream_t stream = 0) {
+      assert(same_extents(*this, A));
+
+      auto nbytes = size() * sizeof(T);
+      if constexpr(device_type() && A.device_type()) {
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice, stream));
+
+      } else if constexpr(host_type() && A.device_type()) {
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToHost, stream));
+
+      } else if constexpr(device_type() && A.host_type()) {
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyHostToDevice, stream));
+
+      } else {
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyHostToHost, stream));
+      }
+   }
+
+
    __host__ void memset_sync(int val) {
       if constexpr(device_type()) {
          ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));

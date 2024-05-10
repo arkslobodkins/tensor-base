@@ -51,6 +51,10 @@ template <typename T, index_t dim>
 class CudaTensorSlice : public TensorSliceBase<T, dim, false, false> {
 public:
    using TensorSliceBase<T, dim, false, false>::TensorSliceBase;
+
+   __host__ [[nodiscard]] auto pass() const {
+      return *this;
+   }
 };
 
 
@@ -65,6 +69,10 @@ template <typename T, index_t dim>
 class ConstCudaTensorSlice : public TensorSliceBase<T, dim, false, true> {
 public:
    using TensorSliceBase<T, dim, false, true>::TensorSliceBase;
+
+   __host__ [[nodiscard]] auto pass() const {
+      return *this;
+   }
 };
 
 

@@ -183,6 +183,16 @@ public:
    }
 
 
+   __host__ [[nodiscard]] auto* pass() {
+      return cuda_ptr();
+   }
+
+
+   __host__ [[nodiscard]] const auto* pass() const {
+      return cuda_ptr();
+   }
+
+
 private:
    using LinearBase<T, dim, false>::ext_;
    using LinearBase<T, dim, false>::data_;
