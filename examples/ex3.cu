@@ -9,15 +9,15 @@ using namespace tnb;
 
 
 template <typename T>
-__global__ void compute(const CudaTensor<T, 4> A, const CudaTensor<T, 4> B, CudaTensor<T, 4> C) {
-   assert(same_extents(A, B, C));
+__global__ void compute(const CudaTensor<T, 4>* A, const CudaTensor<T, 4>* B, CudaTensor<T, 4>* C) {
+   assert(same_extents(*A, *B, *C));
 
    index_t i = blockDim.x * blockIdx.x + threadIdx.x;
-   for(; i < A.extent(0); i += gridDim.x * blockDim.x)
-      for(index_t j = 0; j < A.extent(1); ++j)
-         for(index_t k = 0; k < A.extent(2); ++k)
-            for(index_t l = 0; l < A.extent(3); ++l)
-               C(i, j, k, l) = 2 * A(i, j, k, l) + 2 * B(i, j, k, l);
+   for(; i < A->extent(0); i += gridDim.x * blockDim.x)
+      for(index_t j = 0; j < A->extent(1); ++j)
+         for(index_t k = 0; k < A->extent(2); ++k)
+            for(index_t l = 0; l < A->extent(3); ++l)
+               (*C)(i, j, k, l) = 2 * (*A)(i, j, k, l) + 2 * (*B)(i, j, k, l);
 }
 
 
@@ -36,10 +36,7 @@ __global__ void scale(TensorType A) {
 int main() {
    const auto ext = Extents<4>(4, 2, 2, 2);
    Tensor<int, 4> A(ext), B(ext);
-   CudaTensor<int, 4> A_gpu, B_gpu, C_gpu;
-   A_gpu.Allocate(ext);
-   B_gpu.Allocate(ext);
-   C_gpu.Allocate(ext);
+   CudaTensor<int, 4> A_gpu(ext), B_gpu(ext), C_gpu(ext);
 
    std::iota(A.begin(), A.end(), 0);
    std::iota(B.begin(), B.end(), 0);
@@ -47,15 +44,10 @@ int main() {
    A_gpu.copy_sync(A);
    B_gpu.copy_sync(B);
 
-   compute<<<2, 2>>>(A_gpu, B_gpu, C_gpu);
+   compute<<<2, 2>>>(A_gpu.cuda_ptr(), B_gpu.cuda_ptr(), C_gpu.cuda_ptr());
    scale<<<2, 2>>>(lblock(C_gpu, 0, 2));
 
    A.copy_sync(C_gpu);
-
-   A_gpu.Free();
-   B_gpu.Free();
-   C_gpu.Free();
-
    std::cout << A << std::endl;
 
    return EXIT_SUCCESS;

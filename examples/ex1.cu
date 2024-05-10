@@ -7,13 +7,10 @@ int main() {
 
    int N = 100;
    Tensor<double, 4> A(N, N, N, N);
-   CudaTensor<double, 4> A_gpu;
-   A_gpu.Allocate(A.extents());
+   CudaTensor<double, 4> A_gpu(N, N, N, N);
 
    TIME_EXPR(random(A));
    TIME_EXPR(random(A_gpu));
-
-   A_gpu.Free();
 
    return EXIT_SUCCESS;
 }

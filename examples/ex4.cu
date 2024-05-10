@@ -15,7 +15,7 @@ __global__ void add_scalar(TensorType A, typename TensorType::value_type scalar)
 
 
 template <typename T, index_t M>
-bool verify(const T &x, const typename T::value_type (&scalars)[M]) {
+bool verify(const T& x, const typename T::value_type (&scalars)[M]) {
    for(index_t i = 0; i < x.extent(0); ++i) {
       auto s = lslice(x, i);
       for(index_t k = 0; k < s.size(); ++k) {
@@ -36,27 +36,25 @@ int main() {
    const Extents<2> sub_ext(N, N);
    const auto nbytes = ext.size() / M * sizeof(T);
 
-   T *x;
+   T* x;
    ASSERT_CUDA(cudaMallocHost(&x, M * nbytes));
    auto tx = attach_host(x, ext);
    random(tx);
 
    cudaStream_t streams[M];
-   T *x_gpu[M]{};
+   T* x_gpu[M]{};
    const T scalars[M]{1, 11, 101, 1001};
 
    timer t;
    for(int i = 0; i < M; ++i) {
       ASSERT_CUDA(cudaStreamCreate(&streams[i]));
       ASSERT_CUDA(cudaMallocAsync(&x_gpu[i], nbytes, streams[i]));
-      ASSERT_CUDA(cudaMemcpyAsync(x_gpu[i], lslice(tx, i).data(), nbytes, cudaMemcpyHostToDevice, streams[i]));
+      ASSERT_CUDA(cudaMemcpyAsync(x_gpu[i], lslice(tx, i).data(), nbytes, cudaMemcpyDefault, streams[i]));
 
-      cudaEventRecord(events[2 * i], streams[i]);
       auto t_gpu = attach_device(x_gpu[i], sub_ext);  // using x_gpu[i] is safe
       add_scalar<<<8, 8, 0, streams[i]>>>(t_gpu, scalars[i]);
-      cudaEventRecord(events[2 * i + 1], streams[i]);
 
-      ASSERT_CUDA(cudaMemcpyAsync(lslice(tx, i).data(), x_gpu[i], nbytes, cudaMemcpyDeviceToHost, streams[i]));
+      ASSERT_CUDA(cudaMemcpyAsync(lslice(tx, i).data(), x_gpu[i], nbytes, cudaMemcpyDefault, streams[i]));
       ASSERT_CUDA(cudaFreeAsync(x_gpu[i], streams[i]));
    }
 

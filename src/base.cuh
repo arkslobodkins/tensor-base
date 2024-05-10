@@ -14,7 +14,7 @@
 #include <type_traits>
 
 
-#define ASSERT_CUDA(cudaCall)                                                                   \
+#define ASSERT_CUDA(cudaCall)                                                                           \
    do {                                                                                                 \
       cudaError_t error = cudaCall;                                                                     \
       if(error != cudaSuccess) {                                                                        \
@@ -52,6 +52,12 @@ using index_t = long int;
 template <typename... Types>
 __host__ __device__ constexpr index_t SizeOfCast() {
    return static_cast<index_t>(sizeof...(Types));
+}
+
+
+template <typename IntType>
+__host__ __device__ constexpr index_t index_cast(IntType i) {
+   return static_cast<index_t>(i);
 }
 
 
@@ -149,6 +155,9 @@ __host__ __device__ bool valid_extents(const Extents<dim>& ext) {
    }
    return true;
 }
+
+
+enum Scheme { host, device, unified };
 
 
 template <typename T, index_t dim, bool is_host_t, bool is_const_ptr = false>
@@ -334,7 +343,7 @@ public:
    __host__ __device__ cnd_ref_t operator[](Int i) {
       TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       static_assert(is_actually_integer<Int>());
-      assert(i > -1 && i < size());
+      assert(index_cast(i) > -1 && index_cast(i) < size());
       return data_[i];
    }
 
@@ -343,7 +352,7 @@ public:
    __host__ __device__ const_ref_t operator[](Int i) const {
       TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       static_assert(is_actually_integer<Int>());
-      assert(i > -1 && i < size());
+      assert(index_cast(i) > -1 && index_cast(i) < size());
       return data_[i];
    }
 
@@ -371,6 +380,15 @@ public:
    __host__ void memset_sync(int val) {
       if constexpr(device_type()) {
          ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));
+      } else {
+         std::memset(data(), val, size() * sizeof(T));
+      }
+   }
+
+
+   __host__ void memset_async(int val, cudaStream_t stream = 0) {
+      if constexpr(device_type()) {
+         ASSERT_CUDA(cudaMemsetAsync(data(), val, size() * sizeof(T), stream));
       } else {
          std::memset(data(), val, size() * sizeof(T));
       }

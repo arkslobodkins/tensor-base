@@ -16,7 +16,7 @@
 #include "base.cuh"
 
 
-#define ASSERT_CURAND_SUCCESS(curandCall)                                                \
+#define ASSERT_CURAND(curandCall)                                                        \
    do {                                                                                  \
       curandStatus_t error = curandCall;                                                 \
       if(error != CURAND_STATUS_SUCCESS) {                                               \
@@ -58,21 +58,19 @@ using CudaMatrix = CudaTensor<T, 2>;
 template <typename T, index_t dim>
 class Tensor : public LinearBase<T, dim, true> {
 public:
+   explicit Tensor() = default;
+
+
    explicit Tensor(const Extents<dim>& ext) {
       assert(valid_extents(ext));
       ext_ = ext;
-      if(this->size()) {
-         data_ = new T[this->size()];
-      }
+      Allocate(ext);
    }
 
 
    template <typename... Ints, std::enable_if_t<(... && is_actually_integer<Ints>()), bool> = true>
    explicit Tensor(Ints... ext) : Tensor{Extents<dim>{ext...}} {
    }
-
-
-   explicit Tensor() = default;
 
 
    Tensor(const Tensor& A) : Tensor{A.extents()} {
@@ -112,11 +110,10 @@ public:
 
    void resize(const Extents<dim>& ext) {
       assert(valid_extents(ext));
-      delete[] data_; // avoid double free
-      data_ = nullptr;
-      if(ext.size()) {
-         data_ = new double[ext.size()];
-      }
+      delete[] data_;
+      data_ = nullptr;  // avoid double free if ext is zeros
+
+      Allocate(ext);
       ext_ = ext;
    }
 
@@ -124,6 +121,13 @@ public:
 private:
    using LinearBase<T, dim, true>::ext_;
    using LinearBase<T, dim, true>::data_;
+
+
+   void Allocate(const Extents<dim>& ext) {
+      if(ext.size()) {
+         data_ = new T[ext.size()];
+      }
+   }
 };
 
 
@@ -131,49 +135,64 @@ private:
 template <typename T, index_t dim>
 class CudaTensor : public LinearBase<T, dim, false> {
 public:
-   // can only be created on the host!
-   explicit __host__ CudaTensor() {
+   __host__ explicit CudaTensor() {
    }
 
 
-   // can be shallow copied on host and device
-   CudaTensor(const CudaTensor&) = default;
-   CudaTensor& operator=(const CudaTensor&) = delete;
-
-
-   __host__ void Allocate(const Extents<dim>& ext) {
+   __host__ explicit CudaTensor(const Extents<dim>& ext) {
       assert(valid_extents(ext));
       ext_ = {ext};
-      if(this->size()) {
-         ASSERT_CUDA(cudaMalloc(&data_, this->size() * sizeof(T)));
-      }
+      Allocate(ext);
+      ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensor)));
+      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensor), cudaMemcpyHostToDevice));
    }
 
 
    template <typename... Ints>
-   __host__ void Allocate(Ints... ext) {
-      Allocate(Extents<dim>{ext...});
+   __host__ explicit CudaTensor(Ints... ext) : CudaTensor(Extents<dim>{ext...}) {
    }
 
 
-   __host__ void Free() {
+   CudaTensor(const CudaTensor&) = delete;
+   CudaTensor& operator=(const CudaTensor&) = delete;
+
+
+   __host__ ~CudaTensor() {
       ASSERT_CUDA(cudaFree(data_));
-      ext_ = Extents<dim>{};
-      // not resetting data to null
+      ASSERT_CUDA(cudaFree(cuda_ptr_));
    }
 
 
-   void resize(const Extents<dim>& ext) {
+   __host__ void resize(const Extents<dim>& ext) {
       assert(valid_extents(ext));
       ASSERT_CUDA(cudaFree(data_));
-      data_ = nullptr;
+      data_ = nullptr;  // avoid double free if ext is zeros
+
       Allocate(ext);
+      ext_ = ext;
+   }
+
+
+   __host__ [[nodiscard]] auto* cuda_ptr() {
+      return cuda_ptr_;
+   }
+
+
+   __host__ [[nodiscard]] const auto* cuda_ptr() const {
+      return cuda_ptr_;
    }
 
 
 private:
    using LinearBase<T, dim, false>::ext_;
    using LinearBase<T, dim, false>::data_;
+   CudaTensor* cuda_ptr_{};
+
+   void Allocate(const Extents<dim>& ext) {
+      if(ext.size()) {
+         ASSERT_CUDA(cudaMalloc(&data_, this->size() * sizeof(T)));
+      }
+   }
 };
 
 
@@ -191,9 +210,9 @@ void rand_uniform(Gen& gen, TensorType& A) {
    using T = typename TensorType::value_type;
    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
    if constexpr(std::is_same_v<T, float>) {
-      ASSERT_CURAND_SUCCESS(curandGenerateUniform(gen, A.data(), A.size()));
+      ASSERT_CURAND(curandGenerateUniform(gen, A.data(), A.size()));
    } else {
-      ASSERT_CURAND_SUCCESS(curandGenerateUniformDouble(gen, A.data(), A.size()));
+      ASSERT_CURAND(curandGenerateUniformDouble(gen, A.data(), A.size()));
    }
 }
 
@@ -207,13 +226,13 @@ void random(TensorType<T, dim>& A) {
    curandGenerator_t gen;
 
    if constexpr(std::is_same_v<Tensor<T, dim>, TensorType<T, dim>>) {
-      ASSERT_CURAND_SUCCESS(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
+      ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    } else {
-      ASSERT_CURAND_SUCCESS(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
+      ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    }
-   ASSERT_CURAND_SUCCESS(curandSetPseudoRandomGeneratorSeed(gen, seed));
+   ASSERT_CURAND(curandSetPseudoRandomGeneratorSeed(gen, seed));
    internal::rand_uniform(gen, A);
-   ASSERT_CURAND_SUCCESS(curandDestroyGenerator(gen));
+   ASSERT_CURAND(curandDestroyGenerator(gen));
 }
 
 
