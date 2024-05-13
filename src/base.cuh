@@ -79,7 +79,7 @@ private:
 
 public:
    template <typename... Ints>
-   __host__ __device__ Extents(Ints... ext) : x_{ext...} {
+   __host__ __device__ constexpr Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
       static_assert(SizeOfCast<Ints...>() == dim);
    }

@@ -131,7 +131,7 @@ private:
          }
       } else {
          if(ext.size()) {
-            ASSERT_CUDA(cudaMallocHost(&data_, ext.size()));
+            ASSERT_CUDA(cudaMallocHost(&data_, sizeof(T) * ext.size()));
          }
       }
    }
@@ -171,7 +171,7 @@ public:
 
 
    __host__ CudaTensor(const CudaTensor& A) : CudaTensor(A.extents()) {
-      copy_sync(A);
+      this->copy_sync(A);
    }
 
 
