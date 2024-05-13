@@ -82,8 +82,8 @@ public:
 
 
    Tensor(Tensor&& A) noexcept {
-      ext_ = std::exchange(A.ext_, Extents<dim>{});
-      data_ = std::exchange(A.data_, {});
+      this->swap(A);
+      A->swap(Tensor{});
    }
 
 
@@ -99,8 +99,8 @@ public:
    Tensor& operator=(Tensor&& A) noexcept {
       assert(same_extents(*this, A));
       if(this != &A) {
-         this->Free();
-         data_ = std::exchange(A.data_, {});
+         this->swap(A);
+         A->swap(Tensor{});
       }
       return *this;
    }
@@ -116,6 +116,17 @@ public:
       this->Free();
       Allocate(ext);
       ext_ = ext;
+   }
+
+
+   void swap(Tensor& A) noexcept {
+      ext_ = std::exchange(A.ext_, ext_);
+      std::swap(data_, A.data_);
+   }
+
+
+   void swap(Tensor&& A) noexcept {
+      this->swap(A);
    }
 
 
@@ -175,12 +186,26 @@ public:
    }
 
 
+   __host__ CudaTensor(CudaTensor&& A) noexcept : CudaTensor(Extents<dim>{}) {
+      this->swap(A);
+   }
+
+
    __host__ CudaTensor& operator=(const CudaTensor& A) {
       assert(same_extents(*this, A));
       if(this != &A) {
          this->copy_sync(A);
       }
       return *this;
+   }
+
+
+   __host__ CudaTensor& operator=(CudaTensor&& A) noexcept {
+      assert(same_extents(*this, A));
+      if(this != &A) {
+         this->swap(A);
+         A->swap(CudaTensor{});
+      }
    }
 
 
@@ -217,6 +242,17 @@ public:
 
    __host__ [[nodiscard]] const auto* pass() const {
       return cuda_ptr();
+   }
+
+
+   __host__ void swap(CudaTensor& A) noexcept {
+      ext_ = std::exchange(A.ext_, ext_);
+      std::swap(data_, A.data_);
+   }
+
+
+   __host__ void swap(CudaTensor&& A) noexcept {
+      this->swap(A);
    }
 
 
