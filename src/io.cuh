@@ -13,9 +13,9 @@
 namespace tnb {
 
 
-template <template <typename, index_t> class TensorType, typename T,
-          std::enable_if_t<TensorType<T, 1>::host_type(), bool> = true>
-std::ostream& operator<<(std::ostream& os, const TensorType<T, 1>& A) {
+template <typename TensorType,
+          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 1), bool> = true>
+std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    os << std::fixed << std::setprecision(7);
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << A(i) << " ";
@@ -25,9 +25,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType<T, 1>& A) {
 }
 
 
-template <template <typename, index_t> class TensorType, typename T,
-          std::enable_if_t<TensorType<T, 2>::host_type(), bool> = true>
-std::ostream& operator<<(std::ostream& os, const TensorType<T, 2>& A) {
+template <typename TensorType,
+          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 2), bool> = true>
+std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << lslice(A, i);
    }
@@ -35,9 +35,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType<T, 2>& A) {
 }
 
 
-template <template <typename, index_t> class TensorType, typename T,
-          std::enable_if_t<TensorType<T, 3>::host_type(), bool> = true>
-std::ostream& operator<<(std::ostream& os, const TensorType<T, 3>& A) {
+template <typename TensorType,
+          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 3), bool> = true>
+std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << "A(" << i << ", :, :) = " << std::endl;
       os << lslice(A, i);
@@ -49,9 +49,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType<T, 3>& A) {
 }
 
 
-template <template <typename, index_t> class TensorType, typename T,
-          std::enable_if_t<TensorType<T, 4>::host_type(), bool> = true>
-std::ostream& operator<<(std::ostream& os, const TensorType<T, 4>& A) {
+template <typename TensorType,
+          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 4), bool> = true>
+std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       for(index_t j = 0; j < A.extent(1); ++j) {
          os << "A(" << i << ", " << j << ", :, :) = " << std::endl;

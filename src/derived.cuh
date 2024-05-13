@@ -29,7 +29,11 @@
 namespace tnb {
 
 
-template <typename T, index_t dim>
+////////////////////////////////////////////////////////////////////////////////////////////////
+enum Allocator { Regular, Pinned };
+
+
+template <typename T, index_t dim, Allocator alloc = Regular>
 class Tensor;
 
 
@@ -38,25 +42,24 @@ class CudaTensor;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T>
-using Vector = Tensor<T, 1>;
+template <typename T, Allocator alloc = Regular>
+using Vector = Tensor<T, 1, alloc>;
 
 
 template <typename T>
 using CudaVector = CudaTensor<T, 1>;
 
 
-template <typename T>
-using Matrix = Tensor<T, 2>;
+template <typename T, Allocator alloc = Regular>
+using Matrix = Tensor<T, 2, alloc>;
 
 
 template <typename T>
 using CudaMatrix = CudaTensor<T, 2>;
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, index_t dim>
-class Tensor : public LinearBase<T, dim, true> {
+template <typename T, index_t dim, Allocator alloc>
+class Tensor : public LinearBase<T, dim, host> {
 public:
    explicit Tensor() = default;
 
@@ -96,7 +99,7 @@ public:
    Tensor& operator=(Tensor&& A) noexcept {
       assert(same_extents(*this, A));
       if(this != &A) {
-         delete[] data_;
+         this->Free();
          data_ = std::exchange(A.data_, {});
       }
       return *this;
@@ -104,36 +107,50 @@ public:
 
 
    ~Tensor() {
-      delete[] data_;
+      this->Free();
    }
 
 
    void resize(const Extents<dim>& ext) {
       assert(valid_extents(ext));
-      delete[] data_;
-      data_ = nullptr;  // avoid double free if ext is zeros
-
+      this->Free();
       Allocate(ext);
       ext_ = ext;
    }
 
 
 private:
-   using LinearBase<T, dim, true>::ext_;
-   using LinearBase<T, dim, true>::data_;
+   using LinearBase<T, dim, host>::ext_;
+   using LinearBase<T, dim, host>::data_;
 
 
    void Allocate(const Extents<dim>& ext) {
-      if(ext.size()) {
-         data_ = new T[ext.size()];
+      if constexpr(alloc == Regular) {
+         if(ext.size()) {
+            data_ = new T[ext.size()];
+         }
+      } else {
+         if(ext.size()) {
+            ASSERT_CUDA(cudaMallocHost(&data_, ext.size()));
+         }
       }
+   }
+
+
+   void Free() {
+      if constexpr(alloc == Regular) {
+         delete[] data_;
+      } else {
+         ASSERT_CUDA(cudaFreeHost(data_));
+      }
+      data_ = nullptr;
    }
 };
 
 
 // shallow copy semantics
 template <typename T, index_t dim>
-class CudaTensor : public LinearBase<T, dim, false> {
+class CudaTensor : public LinearBase<T, dim, device> {
 public:
    __host__ explicit CudaTensor() {
    }
@@ -153,8 +170,18 @@ public:
    }
 
 
-   CudaTensor(const CudaTensor&) = delete;
-   CudaTensor& operator=(const CudaTensor&) = delete;
+   __host__ CudaTensor(const CudaTensor& A) : CudaTensor(A.extents()) {
+      copy_sync(A);
+   }
+
+
+   __host__ CudaTensor& operator=(const CudaTensor& A) {
+      assert(same_extents(*this, A));
+      if(this != &A) {
+         this->copy_sync(A);
+      }
+      return *this;
+   }
 
 
    __host__ ~CudaTensor() {
@@ -194,8 +221,8 @@ public:
 
 
 private:
-   using LinearBase<T, dim, false>::ext_;
-   using LinearBase<T, dim, false>::data_;
+   using LinearBase<T, dim, device>::ext_;
+   using LinearBase<T, dim, device>::data_;
    CudaTensor* cuda_ptr_{};
 
    void Allocate(const Extents<dim>& ext) {
@@ -230,12 +257,12 @@ void rand_uniform(Gen& gen, TensorType& A) {
 }  // namespace internal
 
 
-template <template <typename, index_t> class TensorType, typename T, index_t dim>
-void random(TensorType<T, dim>& A) {
+template <typename TensorType>
+void random(TensorType& A) {
    auto seed = internal::get_seed();
    curandGenerator_t gen;
 
-   if constexpr(std::is_same_v<Tensor<T, dim>, TensorType<T, dim>>) {
+   if constexpr(TensorType::host_type()) {
       ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    } else {
       ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));

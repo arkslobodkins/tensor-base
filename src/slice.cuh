@@ -14,8 +14,8 @@ namespace tnb {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, index_t dim, bool is_host_t, bool is_const_ptr>
-class TensorSliceBase : public LinearBase<T, dim, is_host_t, is_const_ptr> {
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr>
+class TensorSliceBase : public LinearBase<T, dim, scheme, is_const_ptr> {
 public:
    __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
                                                 const Extents<dim>& ext) {
@@ -34,23 +34,23 @@ public:
    __host__ __device__ TensorSliceBase& operator=(const TensorSliceBase&) = delete;
 
 private:
-   using LinearBase<T, dim, is_host_t, is_const_ptr>::ext_;
-   using LinearBase<T, dim, is_host_t, is_const_ptr>::data_;
+   using LinearBase<T, dim, scheme, is_const_ptr>::ext_;
+   using LinearBase<T, dim, scheme, is_const_ptr>::data_;
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim>
-class TensorSlice : public TensorSliceBase<T, dim, true, false> {
+class TensorSlice : public TensorSliceBase<T, dim, host, false> {
 public:
-   using TensorSliceBase<T, dim, true, false>::TensorSliceBase;
+   using TensorSliceBase<T, dim, host, false>::TensorSliceBase;
 };
 
 
 template <typename T, index_t dim>
-class CudaTensorSlice : public TensorSliceBase<T, dim, false, false> {
+class CudaTensorSlice : public TensorSliceBase<T, dim, device, false> {
 public:
-   using TensorSliceBase<T, dim, false, false>::TensorSliceBase;
+   using TensorSliceBase<T, dim, device, false>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;
@@ -59,16 +59,16 @@ public:
 
 
 template <typename T, index_t dim>
-class ConstTensorSlice : public TensorSliceBase<T, dim, true, true> {
+class ConstTensorSlice : public TensorSliceBase<T, dim, host, true> {
 public:
-   using TensorSliceBase<T, dim, true, true>::TensorSliceBase;
+   using TensorSliceBase<T, dim, host, true>::TensorSliceBase;
 };
 
 
 template <typename T, index_t dim>
-class ConstCudaTensorSlice : public TensorSliceBase<T, dim, false, true> {
+class ConstCudaTensorSlice : public TensorSliceBase<T, dim, device, true> {
 public:
-   using TensorSliceBase<T, dim, false, true>::TensorSliceBase;
+   using TensorSliceBase<T, dim, device, true>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;

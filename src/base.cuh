@@ -157,10 +157,10 @@ __host__ __device__ bool valid_extents(const Extents<dim>& ext) {
 }
 
 
-enum Scheme { host, device, unified };
+enum Scheme { host, device };
 
 
-template <typename T, index_t dim, bool is_host_t, bool is_const_ptr = false>
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
 class LinearBase {
 private:
    using cnd_ptr_t = std::conditional_t<is_const_ptr, const T*, T*>;
@@ -175,7 +175,7 @@ protected:
 
    __host__ __device__ static void validate_host_type() {
 #ifdef __CUDA_ARCH__
-      if constexpr(is_host_t) {
+      if constexpr(scheme == host) {
          __device__ void not_callable_on_device_error();
          not_callable_on_device_error();
       }
@@ -184,7 +184,7 @@ protected:
 
    __host__ __device__ static void validate_device_type() {
 #ifndef __CUDA_ARCH__
-      if constexpr(!is_host_t) {
+      if constexpr(!scheme == host) {
          __host__ void not_callable_on_host_error();
          not_callable_on_host_error();
       }
@@ -262,12 +262,12 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ static constexpr bool host_type() {
-      return is_host_t;
+      return scheme == host;
    }
 
 
    __host__ __device__ static constexpr bool device_type() {
-      return !is_host_t;
+      return scheme == device;
    }
 
 
@@ -357,8 +357,9 @@ public:
    }
 
 
-   template <template <typename, index_t> class TensorType>
-   __host__ void copy_sync(const TensorType<T, dim>& A) {
+   template <typename TensorType>
+   __host__ void copy_sync(const TensorType& A) {
+      static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
@@ -377,8 +378,9 @@ public:
    }
 
 
-   template <template <typename, index_t> class TensorType>
-   __host__ void copy_async(const TensorType<T, dim>& A, cudaStream_t stream = 0) {
+   template <typename TensorType>
+   __host__ void copy_async(const TensorType& A, cudaStream_t stream = 0) {
+      static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);

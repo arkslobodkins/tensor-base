@@ -34,28 +34,26 @@ int main() {
    constexpr int N = 10000;
    const Extents<3> ext(M, N, N);
    const Extents<2> sub_ext(N, N);
-   const auto nbytes = ext.size() / M * sizeof(T);
+   const auto nbytes = sub_ext.size() * sizeof(T);
 
-   T* x;
-   ASSERT_CUDA(cudaMallocHost(&x, M * nbytes));
-   auto tx = attach_host(x, ext);
-   random(tx);
+   Tensor<T, 3, Pinned> x(ext);
+   random(x);
 
    cudaStream_t streams[M];
-   T* x_gpu[M]{};
+   T* xd[M]{};
    const T scalars[M]{1, 11, 101, 1001};
 
    timer t;
    for(int i = 0; i < M; ++i) {
       ASSERT_CUDA(cudaStreamCreate(&streams[i]));
-      ASSERT_CUDA(cudaMallocAsync(&x_gpu[i], nbytes, streams[i]));
-      ASSERT_CUDA(cudaMemcpyAsync(x_gpu[i], lslice(tx, i).data(), nbytes, cudaMemcpyDefault, streams[i]));
+      ASSERT_CUDA(cudaMallocAsync(&xd[i], nbytes, streams[i]));
+      auto x_gpu = attach_device(xd[i], sub_ext);  // using xd[i] is safe
 
-      auto t_gpu = attach_device(x_gpu[i], sub_ext);  // using x_gpu[i] is safe
-      add_scalar<<<8, 8, 0, streams[i]>>>(t_gpu, scalars[i]);
+      x_gpu.copy_async(lslice(x, i), streams[i]);
+      add_scalar<<<8, 8, 0, streams[i]>>>(x_gpu, scalars[i]);
+      lslice(x, i).copy_async(x_gpu, streams[i]);
 
-      ASSERT_CUDA(cudaMemcpyAsync(lslice(tx, i).data(), x_gpu[i], nbytes, cudaMemcpyDefault, streams[i]));
-      ASSERT_CUDA(cudaFreeAsync(x_gpu[i], streams[i]));
+      ASSERT_CUDA(cudaFreeAsync(xd[i], streams[i]));
    }
 
    for(int i = 0; i < M; ++i) {
@@ -63,12 +61,11 @@ int main() {
       ASSERT_CUDA(cudaStreamDestroy(streams[i]));
    }
 
-   assert(verify(tx, scalars));
+   assert(verify(x, scalars));
 
    if(N <= 8) {
-      std::cout << tx << std::endl;
+      std::cout << x << std::endl;
    }
-   ASSERT_CUDA(cudaFreeHost(x));
    ASSERT_CUDA(cudaDeviceReset());
 
    return EXIT_SUCCESS;
