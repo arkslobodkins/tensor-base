@@ -37,7 +37,7 @@
 
 
 #ifndef NDEBUG
-#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG validate_host_device_type()
+#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG this->validate_host_device_type()
 #else
 #define TENSOR_VALIDATE_HOST_DEVICE_DEBUG
 #endif
@@ -67,6 +67,12 @@ __host__ __device__ constexpr bool is_actually_integer() {
    return std::numeric_limits<T>::is_integer && (!std::is_same_v<T, bool>) && (!std::is_same_v<T, char>)
        && (!std::is_same_v<T, signed char>) && (!std::is_same_v<T, unsigned char>)
        && (!std::is_same_v<T, wchar_t>) && (!std::is_same_v<T, char16_t>) && (!std::is_same_v<T, char32_t>);
+}
+
+
+template <typename T>
+__host__ __device__ constexpr void static_assert_false() {
+   static_assert(!sizeof(T));
 }
 
 
@@ -157,11 +163,11 @@ __host__ __device__ bool valid_extents(const Extents<dim>& ext) {
 }
 
 
-enum Scheme { host, device };
+enum Scheme { host, device, unified };
 
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
-class LinearBase {
+class LinearBaseCommon {
 private:
    using cnd_ptr_t = std::conditional_t<is_const_ptr, const T*, T*>;
    using cnd_ref_t = std::conditional_t<is_const_ptr, const T&, T&>;
@@ -202,38 +208,33 @@ public:
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   explicit LinearBase() = default;
-   LinearBase(const LinearBase&) = default;
-   LinearBase& operator=(const LinearBase&) = default;
+   explicit LinearBaseCommon() = default;
+   LinearBaseCommon(const LinearBaseCommon&) = default;
+   LinearBaseCommon& operator=(const LinearBaseCommon&) = default;
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ cnd_ptr_t data() {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return size() == 0 ? nullptr : data_;
    }
 
 
    __host__ __device__ const_ptr_t data() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return size() == 0 ? nullptr : data_;
    }
 
 
    __host__ __device__ bool empty() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return !size();
    }
 
 
    __host__ __device__ cnd_ptr_t begin() {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       return data();
    }
 
 
    __host__ __device__ const_ptr_t begin() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       return data();
    }
 
@@ -244,13 +245,11 @@ public:
 
 
    __host__ __device__ cnd_ptr_t end() {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       return data() + size();
    }
 
 
    __host__ __device__ const_ptr_t end() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       return data() + size();
    }
 
@@ -271,39 +270,39 @@ public:
    }
 
 
+   __host__ __device__ static constexpr bool unified_type() {
+      return scheme == unified;
+   }
+
+
    __host__ __device__ static constexpr index_t dimension() {
       return dim;
    }
 
 
    __host__ __device__ index_t size() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_.size();
    }
 
 
    __host__ __device__ index_t extent(index_t d) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_[d];
    }
 
 
    __host__ __device__ Extents<dim> extents() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return ext_;
    }
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ bool valid_index(index_t i, index_t d) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return i > -1 && i < ext_[d];
    }
 
 
    template <index_t in_dim, typename First, typename... Ints>
    __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       static_assert(is_actually_integer<First>());
       assert(valid_index(first, in_dim - 1 - SizeOfCast<Ints...>()));
 
@@ -318,14 +317,12 @@ public:
 
    template <typename First, typename... Ints>
    __host__ __device__ index_t index_of(First first, Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
       return offset_of<dim, First, Ints...>(first, indexes...);
    }
 
 
    template <typename... Ints>
    __host__ __device__ cnd_ref_t operator()(Ints... indexes) {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
    }
@@ -333,7 +330,6 @@ public:
 
    template <typename... Ints>
    __host__ __device__ const_ref_t operator()(Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       TENSOR_STATIC_ASSERT_DIMENSION();
       return data_[index_of(indexes...)];
    }
@@ -341,7 +337,6 @@ public:
 
    template <typename Int>
    __host__ __device__ cnd_ref_t operator[](Int i) {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       static_assert(is_actually_integer<Int>());
       assert(index_cast(i) > -1 && index_cast(i) < size());
       return data_[i];
@@ -350,26 +345,171 @@ public:
 
    template <typename Int>
    __host__ __device__ const_ref_t operator[](Int i) const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
       static_assert(is_actually_integer<Int>());
       assert(index_cast(i) > -1 && index_cast(i) < size());
       return data_[i];
+   }
+};
+
+
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
+          std::enable_if_t<scheme == host || scheme == device, bool> = true>
+class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr> {
+private:
+   using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr>;
+
+protected:
+   using Base::data_;
+   using Base::ext_;
+
+public:
+   using size_type = index_t;
+   using value_type = T;
+
+
+   ////////////////////////////////////////////////////////////////////////////////////////////////
+   explicit LinearBase() = default;
+   LinearBase(const LinearBase&) = default;
+   LinearBase& operator=(const LinearBase&) = default;
+
+
+   ////////////////////////////////////////////////////////////////////////////////////////////////
+   __host__ __device__ decltype(auto) data() {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::data();
+   }
+
+
+   __host__ __device__ decltype(auto) data() const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::data();
+   }
+
+
+   __host__ __device__ bool empty() const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::empty();
+   }
+
+
+   __host__ __device__ decltype(auto) begin() {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::begin();
+   }
+
+
+   __host__ __device__ decltype(auto) begin() const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::begin();
+   }
+
+
+   __host__ __device__ decltype(auto) cbegin() const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::cbegin();
+   }
+
+
+   __host__ __device__ decltype(auto) end() {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::end();
+   }
+
+
+   __host__ __device__ decltype(auto) end() const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::end();
+   }
+
+
+   __host__ __device__ decltype(auto) cend() const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::cend();
+   }
+
+
+   ////////////////////////////////////////////////////////////////////////////////////////////////
+   __host__ __device__ index_t size() const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::size();
+   }
+
+
+   __host__ __device__ index_t extent(index_t d) const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::extent(d);
+   }
+
+
+   __host__ __device__ Extents<dim> extents() const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::extents();
+   }
+
+
+   ////////////////////////////////////////////////////////////////////////////////////////////////
+   __host__ __device__ bool valid_index(index_t i, index_t d) const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::valid_index(i, d);
+   }
+
+
+   template <index_t in_dim, typename First, typename... Ints>
+   __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::template offset_of<in_dim>(first, indexes...);
+   }
+
+
+   template <typename First, typename... Ints>
+   __host__ __device__ index_t index_of(First first, Ints... indexes) const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::index_of(first, indexes...);
+   }
+
+
+   template <typename... Ints>
+   __host__ __device__ decltype(auto) operator()(Ints... indexes) {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::operator()(indexes...);
+   }
+
+
+   template <typename... Ints>
+   __host__ __device__ decltype(auto) operator()(Ints... indexes) const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::operator()(indexes...);
+   }
+
+
+   template <typename Int>
+   __host__ __device__ decltype(auto) operator[](Int i) {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::operator[](i);
+   }
+
+
+   template <typename Int>
+   __host__ __device__ decltype(auto) operator[](Int i) const {
+      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      return Base::operator[](i);
    }
 
 
    template <typename TensorType>
    __host__ void copy_sync(const TensorType& A) {
+      static_assert(!TensorType::unified_type());
       static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
-      if constexpr(device_type() && A.device_type()) {
+      if constexpr(this->device_type() && A.device_type()) {
          ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice));
 
-      } else if constexpr(host_type() && A.device_type()) {
+      } else if constexpr(this->host_type() && A.device_type()) {
          ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToHost));
 
-      } else if constexpr(device_type() && A.host_type()) {
+      } else if constexpr(this->device_type() && A.host_type()) {
          ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToDevice));
 
       } else {
@@ -380,17 +520,18 @@ public:
 
    template <typename TensorType>
    __host__ void copy_async(const TensorType& A, cudaStream_t stream = 0) {
+      static_assert(!TensorType::unified_type());
       static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
-      if constexpr(device_type() && A.device_type()) {
+      if constexpr(this->device_type() && A.device_type()) {
          ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice, stream));
 
-      } else if constexpr(host_type() && A.device_type()) {
+      } else if constexpr(this->host_type() && A.device_type()) {
          ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToHost, stream));
 
-      } else if constexpr(device_type() && A.host_type()) {
+      } else if constexpr(this->device_type() && A.host_type()) {
          ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyHostToDevice, stream));
 
       } else {
@@ -400,7 +541,7 @@ public:
 
 
    __host__ void memset_sync(int val) {
-      if constexpr(device_type()) {
+      if constexpr(this->device_type()) {
          ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));
       } else {
          std::memset(data(), val, size() * sizeof(T));
@@ -409,11 +550,8 @@ public:
 
 
    __host__ void memset_async(int val, cudaStream_t stream = 0) {
-      if constexpr(device_type()) {
-         ASSERT_CUDA(cudaMemsetAsync(data(), val, size() * sizeof(T), stream));
-      } else {
-         std::memset(data(), val, size() * sizeof(T));
-      }
+      static_assert(this->device_type() == true);
+      ASSERT_CUDA(cudaMemsetAsync(data(), val, size() * sizeof(T), stream));
    }
 };
 

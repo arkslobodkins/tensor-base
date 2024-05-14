@@ -159,7 +159,6 @@ private:
 };
 
 
-// shallow copy semantics
 template <typename T, index_t dim>
 class CudaTensor : public LinearBase<T, dim, device> {
 public:
@@ -265,6 +264,98 @@ private:
       if(ext.size()) {
          ASSERT_CUDA(cudaMalloc(&data_, this->size() * sizeof(T)));
       }
+   }
+};
+
+
+template <typename T, index_t dim>
+class UnifiedTensor : public LinearBaseCommon<T, dim, unified> {
+public:
+   __host__ explicit UnifiedTensor() {
+   }
+
+
+   __host__ explicit UnifiedTensor(const Extents<dim>& ext) {
+      assert(valid_extents(ext));
+      ext_ = ext;
+      Allocate(ext);
+   }
+
+
+   template <typename... Ints, std::enable_if_t<(... && is_actually_integer<Ints>()), bool> = true>
+   __host__ explicit UnifiedTensor(Ints... ext) : UnifiedTensor{Extents<dim>{ext...}} {
+   }
+
+
+   __host__ UnifiedTensor(const UnifiedTensor& A) : UnifiedTensor{A.extents()} {
+      std::copy(A.begin(), A.end(), this->begin());
+   }
+
+
+   __host__ UnifiedTensor(UnifiedTensor&& A) noexcept {
+      this->swap(A);
+      A->swap(UnifiedTensor{});
+   }
+
+
+   __host__ UnifiedTensor& operator=(const UnifiedTensor& A) {
+      assert(same_extents(*this, A));
+      if(this != &A) {
+         std::copy(A.begin(), A.end(), this->begin());
+      }
+      return *this;
+   }
+
+
+   __host__ UnifiedTensor& operator=(UnifiedTensor&& A) noexcept {
+      assert(same_extents(*this, A));
+      if(this != &A) {
+         this->swap(A);
+         A->swap(UnifiedTensor{});
+      }
+      return *this;
+   }
+
+
+   __host__ ~UnifiedTensor() {
+      this->Free();
+   }
+
+
+   __host__ void resize(const Extents<dim>& ext) {
+      assert(valid_extents(ext));
+      this->Free();
+      Allocate(ext);
+      ext_ = ext;
+   }
+
+
+   __host__ void swap(UnifiedTensor& A) noexcept {
+      ext_ = std::exchange(A.ext_, ext_);
+      std::swap(data_, A.data_);
+   }
+
+
+   __host__ void swap(UnifiedTensor&& A) noexcept {
+      this->swap(A);
+   }
+
+
+private:
+   using LinearBaseCommon<T, dim, unified>::ext_;
+   using LinearBaseCommon<T, dim, unified>::data_;
+
+
+   __host__ void Allocate(const Extents<dim>& ext) {
+      if(ext.size()) {
+         ASSERT_CUDA(cudaMallocManaged(&data_, sizeof(T) * ext.size()));
+      }
+   }
+
+
+   __host__ void Free() {
+      ASSERT_CUDA(cudaFree(data_));
+      data_ = nullptr;
    }
 };
 

@@ -1,4 +1,4 @@
-all : ex1 ex2 ex3 ex4
+all : ex1 ex2 ex3 ex4 ex5
 
 debug = 1
 
@@ -22,6 +22,9 @@ ex3: ex3.cu
 
 ex4: ex4.cu
 	nvcc ex4.cu -o ex4.x $(CUDAFLAGS) $(CXXFLAGS) -lcurand
+
+ex5: ex5.cu
+	nvcc ex5.cu -o ex5.x $(CUDAFLAGS) $(CXXFLAGS) -lcurand
 
 clean:
 	rm -rf *.x

@@ -14,7 +14,9 @@ namespace tnb {
 
 
 template <typename TensorType,
-          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 1), bool> = true>
+          std::enable_if_t<
+              (TensorType::host_type() || TensorType::unified_type()) && (TensorType::dimension() == 1), bool>
+          = true>
 std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    os << std::fixed << std::setprecision(7);
    for(index_t i = 0; i < A.extent(0); ++i) {
@@ -26,7 +28,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType& A) {
 
 
 template <typename TensorType,
-          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 2), bool> = true>
+          std::enable_if_t<
+              (TensorType::host_type() || TensorType::unified_type()) && (TensorType::dimension() == 2), bool>
+          = true>
 std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << lslice(A, i);
@@ -36,7 +40,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType& A) {
 
 
 template <typename TensorType,
-          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 3), bool> = true>
+          std::enable_if_t<
+              (TensorType::host_type() || TensorType::unified_type()) && (TensorType::dimension() == 3), bool>
+          = true>
 std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << "A(" << i << ", :, :) = " << std::endl;
@@ -50,7 +56,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType& A) {
 
 
 template <typename TensorType,
-          std::enable_if_t<TensorType::host_type() && (TensorType::dimension() == 4), bool> = true>
+          std::enable_if_t<
+              (TensorType::host_type() || TensorType::unified_type()) && (TensorType::dimension() == 4), bool>
+          = true>
 std::ostream& operator<<(std::ostream& os, const TensorType& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
       for(index_t j = 0; j < A.extent(1); ++j) {
