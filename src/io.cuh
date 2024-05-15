@@ -76,10 +76,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType& A) {
 }
 
 
-template <template <typename, index_t> class TensorType, typename T, index_t dim,
-          std::enable_if_t<TensorType<T, dim>::device_type(), bool> = true>
-std::ostream& operator<<(std::ostream& os, const TensorType<T, dim>& A) {
-   Tensor<T, dim> B(A.extents());
+template <typename TensorType, std::enable_if_t<TensorType::device_type(), bool> = true>
+std::ostream& operator<<(std::ostream& os, const TensorType& A) {
+   Tensor<ValueTypeOf<TensorType>, A.dimension()> B(A.extents());
    B.copy_sync(A);
    return os << B;
 }

@@ -29,39 +29,15 @@
 namespace tnb {
 
 
-////////////////////////////////////////////////////////////////////////////////////////////////
 enum Allocator { Regular, Pinned };
 
 
-template <typename T, index_t dim, Allocator alloc = Regular>
-class Tensor;
-
-
-template <typename T, index_t dim>
-class CudaTensor;
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, Allocator alloc = Regular>
-using Vector = Tensor<T, 1, alloc>;
-
-
-template <typename T>
-using CudaVector = CudaTensor<T, 1>;
-
-
-template <typename T, Allocator alloc = Regular>
-using Matrix = Tensor<T, 2, alloc>;
-
-
-template <typename T>
-using CudaMatrix = CudaTensor<T, 2>;
-
-
-template <typename T, index_t dim, Allocator alloc>
+template <typename T, index_t dim, Allocator alloc = Regular>
 class Tensor : public LinearBase<T, dim, host> {
 public:
-   explicit Tensor() = default;
+   explicit Tensor() {
+   }
 
 
    explicit Tensor(const Extents<dim>& ext) {
@@ -159,38 +135,39 @@ private:
 };
 
 
-template <typename T, index_t dim>
-class CudaTensor : public LinearBase<T, dim, device> {
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename Base>
+class CudaTensorDerived : public Base {
 public:
-   __host__ explicit CudaTensor() {
+   __host__ explicit CudaTensorDerived() {
+      ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensorDerived)));
    }
 
 
-   __host__ explicit CudaTensor(const Extents<dim>& ext) {
+   __host__ explicit CudaTensorDerived(const Extents<Base::dimension()>& ext) : CudaTensorDerived{} {
       assert(valid_extents(ext));
       ext_ = {ext};
       Allocate(ext);
-      ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensor)));
-      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensor), cudaMemcpyHostToDevice));
    }
 
 
    template <typename... Ints>
-   __host__ explicit CudaTensor(Ints... ext) : CudaTensor(Extents<dim>{ext...}) {
+   __host__ explicit CudaTensorDerived(Ints... ext) : CudaTensorDerived{Extents<Base::dimension()>{ext...}} {
    }
 
 
-   __host__ CudaTensor(const CudaTensor& A) : CudaTensor(A.extents()) {
+   __host__ CudaTensorDerived(const CudaTensorDerived& A) : CudaTensorDerived{A.extents()} {
       this->copy_sync(A);
    }
 
 
-   __host__ CudaTensor(CudaTensor&& A) noexcept : CudaTensor(Extents<dim>{}) {
+   __host__ CudaTensorDerived(CudaTensorDerived&& A) noexcept
+       : CudaTensorDerived{Extents<Base::dimension()>{}} {
       this->swap(A);
    }
 
 
-   __host__ CudaTensor& operator=(const CudaTensor& A) {
+   __host__ CudaTensorDerived& operator=(const CudaTensorDerived& A) {
       assert(same_extents(*this, A));
       if(this != &A) {
          this->copy_sync(A);
@@ -199,22 +176,22 @@ public:
    }
 
 
-   __host__ CudaTensor& operator=(CudaTensor&& A) noexcept {
+   __host__ CudaTensorDerived& operator=(CudaTensorDerived&& A) noexcept {
       assert(same_extents(*this, A));
       if(this != &A) {
          this->swap(A);
-         A->swap(CudaTensor{});
+         A->swap(CudaTensorDerived{});
       }
    }
 
 
-   __host__ ~CudaTensor() {
+   __host__ ~CudaTensorDerived() {
       ASSERT_CUDA(cudaFree(data_));
       ASSERT_CUDA(cudaFree(cuda_ptr_));
    }
 
 
-   __host__ void resize(const Extents<dim>& ext) {
+   __host__ void resize(const Extents<Base::dimension()>& ext) {
       assert(valid_extents(ext));
       ASSERT_CUDA(cudaFree(data_));
       data_ = nullptr;  // avoid double free if ext is zeros
@@ -225,11 +202,13 @@ public:
 
 
    __host__ [[nodiscard]] auto* cuda_ptr() {
+      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
       return cuda_ptr_;
    }
 
 
    __host__ [[nodiscard]] const auto* cuda_ptr() const {
+      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
       return cuda_ptr_;
    }
 
@@ -244,120 +223,69 @@ public:
    }
 
 
-   __host__ void swap(CudaTensor& A) noexcept {
+   __host__ void swap(CudaTensorDerived& A) noexcept {
       ext_ = std::exchange(A.ext_, ext_);
       std::swap(data_, A.data_);
    }
 
 
-   __host__ void swap(CudaTensor&& A) noexcept {
+   __host__ void swap(CudaTensorDerived&& A) noexcept {
       this->swap(A);
    }
 
 
 private:
-   using LinearBase<T, dim, device>::ext_;
-   using LinearBase<T, dim, device>::data_;
-   CudaTensor* cuda_ptr_{};
+   using Base::data_;
+   using Base::ext_;
+   CudaTensorDerived* cuda_ptr_{};
 
-   void Allocate(const Extents<dim>& ext) {
+   void Allocate(const Extents<Base::dimension()>& ext) {
       if(ext.size()) {
-         ASSERT_CUDA(cudaMalloc(&data_, this->size() * sizeof(T)));
+         if constexpr(this->device_type()) {
+            ASSERT_CUDA(cudaMalloc(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
+         } else if constexpr(this->unified_type()) {
+            ASSERT_CUDA(cudaMallocManaged(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
+         } else {
+            assert(false && "base class must be either device type or unified type");
+         }
       }
    }
 };
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, index_t dim>
+using CudaTensor = CudaTensorDerived<LinearBase<T, dim, device>>;
 
 
 template <typename T, index_t dim>
-class UnifiedTensor : public LinearBaseCommon<T, dim, unified> {
-public:
-   __host__ explicit UnifiedTensor() {
-   }
+using UnifiedTensor = CudaTensorDerived<LinearBaseCommon<T, dim, unified>>;
 
 
-   __host__ explicit UnifiedTensor(const Extents<dim>& ext) {
-      assert(valid_extents(ext));
-      ext_ = ext;
-      Allocate(ext);
-   }
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, Allocator alloc = Regular>
+using Vector = Tensor<T, 1, alloc>;
 
 
-   template <typename... Ints, std::enable_if_t<(... && is_actually_integer<Ints>()), bool> = true>
-   __host__ explicit UnifiedTensor(Ints... ext) : UnifiedTensor{Extents<dim>{ext...}} {
-   }
+template <typename T>
+using CudaVector = CudaTensor<T, 1>;
 
 
-   __host__ UnifiedTensor(const UnifiedTensor& A) : UnifiedTensor{A.extents()} {
-      std::copy(A.begin(), A.end(), this->begin());
-   }
+template <typename T>
+using UnifiedVector = UnifiedTensor<T, 1>;
 
 
-   __host__ UnifiedTensor(UnifiedTensor&& A) noexcept {
-      this->swap(A);
-      A->swap(UnifiedTensor{});
-   }
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, Allocator alloc = Regular>
+using Matrix = Tensor<T, 2, alloc>;
 
 
-   __host__ UnifiedTensor& operator=(const UnifiedTensor& A) {
-      assert(same_extents(*this, A));
-      if(this != &A) {
-         std::copy(A.begin(), A.end(), this->begin());
-      }
-      return *this;
-   }
+template <typename T>
+using CudaMatrix = CudaTensor<T, 2>;
 
 
-   __host__ UnifiedTensor& operator=(UnifiedTensor&& A) noexcept {
-      assert(same_extents(*this, A));
-      if(this != &A) {
-         this->swap(A);
-         A->swap(UnifiedTensor{});
-      }
-      return *this;
-   }
-
-
-   __host__ ~UnifiedTensor() {
-      this->Free();
-   }
-
-
-   __host__ void resize(const Extents<dim>& ext) {
-      assert(valid_extents(ext));
-      this->Free();
-      Allocate(ext);
-      ext_ = ext;
-   }
-
-
-   __host__ void swap(UnifiedTensor& A) noexcept {
-      ext_ = std::exchange(A.ext_, ext_);
-      std::swap(data_, A.data_);
-   }
-
-
-   __host__ void swap(UnifiedTensor&& A) noexcept {
-      this->swap(A);
-   }
-
-
-private:
-   using LinearBaseCommon<T, dim, unified>::ext_;
-   using LinearBaseCommon<T, dim, unified>::data_;
-
-
-   __host__ void Allocate(const Extents<dim>& ext) {
-      if(ext.size()) {
-         ASSERT_CUDA(cudaMallocManaged(&data_, sizeof(T) * ext.size()));
-      }
-   }
-
-
-   __host__ void Free() {
-      ASSERT_CUDA(cudaFree(data_));
-      data_ = nullptr;
-   }
-};
+template <typename T>
+using UnifiedMatrix = UnifiedTensor<T, 2>;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -371,7 +299,7 @@ inline auto get_seed() {
 
 template <typename Gen, typename TensorType>
 void rand_uniform(Gen& gen, TensorType& A) {
-   using T = typename TensorType::value_type;
+   using T = ValueTypeOf<TensorType>;
    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
    if constexpr(std::is_same_v<T, float>) {
       ASSERT_CURAND(curandGenerateUniform(gen, A.data(), A.size()));
@@ -391,7 +319,7 @@ void random(TensorType& A) {
 
    if constexpr(TensorType::host_type()) {
       ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
-   } else {
+   } else {  // device or unified
       ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    }
    ASSERT_CURAND(curandSetPseudoRandomGeneratorSeed(gen, seed));

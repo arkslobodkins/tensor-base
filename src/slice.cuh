@@ -39,6 +39,29 @@ private:
 };
 
 
+template <typename T, index_t dim, bool is_const_ptr>
+class UnifiedTensorSliceBase : public LinearBaseCommon<T, dim, unified, is_const_ptr> {
+public:
+   __host__ __device__ explicit UnifiedTensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
+                                                       const Extents<dim>& ext) {
+      assert(valid_extents(ext));
+      data_ = data;
+      ext_ = ext;
+   }
+
+   __host__ __device__ UnifiedTensorSliceBase(const UnifiedTensorSliceBase& A) {
+      data_ = A.data_;
+      ext_ = A.ext_;
+   }
+
+   __host__ __device__ UnifiedTensorSliceBase& operator=(const UnifiedTensorSliceBase&) = delete;
+
+private:
+   using LinearBaseCommon<T, dim, unified, is_const_ptr>::ext_;
+   using LinearBaseCommon<T, dim, unified, is_const_ptr>::data_;
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim>
 class TensorSlice : public TensorSliceBase<T, dim, host, false> {
@@ -76,6 +99,29 @@ public:
 };
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T, index_t dim>
+class UnifiedTensorSlice : public UnifiedTensorSliceBase<T, dim, false> {
+public:
+   using UnifiedTensorSliceBase<T, dim, false>::UnifiedTensorSliceBase;
+
+   __host__ [[nodiscard]] auto pass() const {
+      return *this;
+   }
+};
+
+
+template <typename T, index_t dim>
+class UnifiedConstTensorSlice : public UnifiedTensorSliceBase<T, dim, true> {
+public:
+   using UnifiedTensorSliceBase<T, dim, true>::UnifiedTensorSliceBase;
+
+   __host__ [[nodiscard]] auto pass() const {
+      return *this;
+   }
+};
+
+
 namespace internal {
 template <typename TensorType, index_t in_dim>
 __host__ __device__ auto slice_data(TensorType&& A, const Extents<in_dim>& ext, index_t offset) {
@@ -83,15 +129,19 @@ __host__ __device__ auto slice_data(TensorType&& A, const Extents<in_dim>& ext, 
    if constexpr(std::is_const_v<std::remove_reference_t<TensorType>>) {
       if constexpr(A.host_type()) {
          return ConstTensorSlice<T, in_dim>(A.data() + offset, ext);
-      } else {
+      } else if constexpr(A.device_type()) {
          return ConstCudaTensorSlice<T, in_dim>(A.data() + offset, ext);
+      } else {
+         return UnifiedConstTensorSlice<T, in_dim>(A.data() + offset, ext);
       }
 
    } else {
       if constexpr(A.host_type()) {
          return TensorSlice<T, in_dim>(A.data() + offset, ext);
-      } else {
+      } else if constexpr(A.device_type()) {
          return CudaTensorSlice<T, in_dim>(A.data() + offset, ext);
+      } else {
+         return UnifiedTensorSlice<T, in_dim>(A.data() + offset, ext);
       }
    }
 }

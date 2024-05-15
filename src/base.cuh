@@ -49,6 +49,10 @@ namespace tnb {
 using index_t = long int;
 
 
+template <typename T>
+using ValueTypeOf = typename T::value_type;
+
+
 template <typename... Types>
 __host__ __device__ constexpr index_t SizeOfCast() {
    return static_cast<index_t>(sizeof...(Types));
@@ -352,9 +356,10 @@ public:
 };
 
 
-template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
-          std::enable_if_t<scheme == host || scheme == device, bool> = true>
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
 class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr> {
+   static_assert(scheme == host || scheme == device);
+
 private:
    using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr>;
 
@@ -499,7 +504,7 @@ public:
    template <typename TensorType>
    __host__ void copy_sync(const TensorType& A) {
       static_assert(!TensorType::unified_type());
-      static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
+      static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
@@ -521,7 +526,7 @@ public:
    template <typename TensorType>
    __host__ void copy_async(const TensorType& A, cudaStream_t stream = 0) {
       static_assert(!TensorType::unified_type());
-      static_assert(std::is_same_v<value_type, typename TensorType::value_type>);
+      static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
       assert(same_extents(*this, A));
 
       auto nbytes = size() * sizeof(T);
