@@ -36,14 +36,14 @@ enum Allocator { Regular, Pinned };
 template <typename T, index_t dim, Allocator alloc = Regular>
 class Tensor : public LinearBase<T, dim, host> {
 public:
-   explicit Tensor() {
+   explicit Tensor() : Base{} {
    }
 
 
    explicit Tensor(const Extents<dim>& ext) {
       assert(valid_extents(ext));
       ext_ = ext;
-      Allocate(ext);
+      this->Allocate(ext);
    }
 
 
@@ -90,7 +90,7 @@ public:
    void resize(const Extents<dim>& ext) {
       assert(valid_extents(ext));
       this->Free();
-      Allocate(ext);
+      this->Allocate(ext);
       ext_ = ext;
    }
 
@@ -107,8 +107,9 @@ public:
 
 
 private:
-   using LinearBase<T, dim, host>::ext_;
-   using LinearBase<T, dim, host>::data_;
+   using Base = LinearBase<T, dim, host>;
+   using Base::data_;
+   using Base::ext_;
 
 
    void Allocate(const Extents<dim>& ext) {
@@ -139,7 +140,7 @@ private:
 template <typename Base>
 class CudaTensorDerived : public Base {
 public:
-   __host__ explicit CudaTensorDerived() {
+   __host__ explicit CudaTensorDerived() : Base{} {
       ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensorDerived)));
    }
 
@@ -147,7 +148,7 @@ public:
    __host__ explicit CudaTensorDerived(const Extents<Base::dimension()>& ext) : CudaTensorDerived{} {
       assert(valid_extents(ext));
       ext_ = {ext};
-      Allocate(ext);
+      this->Allocate(ext);
    }
 
 
@@ -196,7 +197,7 @@ public:
       ASSERT_CUDA(cudaFree(data_));
       data_ = nullptr;  // avoid double free if ext is zeros
 
-      Allocate(ext);
+      this->Allocate(ext);
       ext_ = ext;
    }
 

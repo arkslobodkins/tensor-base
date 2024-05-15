@@ -88,15 +88,15 @@ private:
    index_t x_[dim]{};
 
 public:
+   explicit Extents() = default;
+   Extents(const Extents&) = default;
+   Extents& operator=(const Extents&) = default;
+
    template <typename... Ints>
    __host__ __device__ constexpr Extents(Ints... ext) : x_{ext...} {
       static_assert((... && is_actually_integer<Ints>()));
       static_assert(SizeOfCast<Ints...>() == dim);
    }
-
-   explicit Extents() = default;
-   Extents(const Extents&) = default;
-   Extents& operator=(const Extents&) = default;
 
    __host__ __device__ index_t& operator[](index_t d) {
       assert(d > -1 && d < dim);
@@ -244,7 +244,7 @@ public:
 
 
    __host__ __device__ const_ptr_t cbegin() const {
-      return begin();
+      return data();
    }
 
 
@@ -259,7 +259,7 @@ public:
 
 
    __host__ __device__ const_ptr_t cend() const {
-      return end();
+      return data() + size();
    }
 
 
