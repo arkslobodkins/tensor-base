@@ -246,7 +246,7 @@ private:
          } else if constexpr(this->unified_type()) {
             ASSERT_CUDA(cudaMallocManaged(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
          } else {
-            assert(false && "base class must be either device type or unified type");
+            static_assert_false<Base>();
          }
       }
    }
