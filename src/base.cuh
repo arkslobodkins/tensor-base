@@ -289,6 +289,11 @@ public:
    }
 
 
+   __host__ __device__ index_t bytes() const {
+      return size() * sizeof(T);
+   }
+
+
    __host__ __device__ index_t extent(index_t d) const {
       return ext_[d];
    }
@@ -437,6 +442,12 @@ public:
    __host__ __device__ index_t size() const {
       TENSOR_VALIDATE_HOST_DEBUG;
       return Base::size();
+   }
+
+
+   __host__ __device__ index_t bytes() const {
+      TENSOR_VALIDATE_HOST_DEBUG;
+      return Base::bytes();
    }
 
 
