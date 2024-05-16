@@ -7,7 +7,7 @@
 #include <iostream>
 #include <type_traits>
 
-#include "derived.cuh"
+#include "slice.cuh"
 
 
 namespace tnb {

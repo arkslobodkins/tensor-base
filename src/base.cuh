@@ -170,6 +170,18 @@ __host__ __device__ bool valid_extents(const Extents<dim>& ext) {
 enum Scheme { host, device, unified };
 
 
+template <typename T, typename... Ts>
+__host__ __device__ constexpr bool same_value_type() {
+   return (std::is_same_v<ValueTypeOf<T>, ValueTypeOf<Ts>> && ...);
+}
+
+
+template <typename T, typename... Ts>
+__host__ __device__ constexpr bool same_memory_kind() {
+   return (T::memory_kind() == Ts::memory_kind() && ...);
+}
+
+
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
 class LinearBaseCommon {
 private:
@@ -279,6 +291,11 @@ public:
    }
 
 
+   __host__ __device__ static constexpr auto memory_kind() {
+      return scheme;
+   }
+
+
    __host__ __device__ static constexpr index_t dimension() {
       return dim;
    }
@@ -357,6 +374,42 @@ public:
       static_assert(is_actually_integer<Int>());
       assert(index_cast(i) > -1 && index_cast(i) < size());
       return data_[i];
+   }
+
+
+   __host__ void memset_sync(int val) {
+      if constexpr(this->host_type()) {
+         std::memset(data(), val, size() * sizeof(T));
+      } else {
+         // set on device for unified memory type
+         ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));
+      }
+   }
+
+
+   template <typename TensorType>
+   __host__ void copy_sync(const TensorType& A) {
+      static_assert(!TensorType::unified_type());
+      static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
+      assert(same_extents(*this, A));
+
+      if constexpr(this->device_type() && A.device_type()) {
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), bytes(), cudaMemcpyDeviceToDevice));
+
+      } else if constexpr(this->host_type() && A.device_type()) {
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), bytes(), cudaMemcpyDeviceToHost));
+
+      } else if constexpr(this->device_type() && A.host_type()) {
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), bytes(), cudaMemcpyHostToDevice));
+
+      } else if constexpr(this->host_type() && A.host_type()) {
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), bytes(), cudaMemcpyHostToHost));
+      } else if constexpr(this->unified_type() && A.unified_type()) {
+         ASSERT_CUDA(cudaMemcpy(data(), A.data(), bytes(), cudaMemcpyDeviceToDevice));
+      } else {
+         // copy_sync is allowed for unified memory types only if both types are unified
+         static_assert_false<T>();
+      }
    }
 };
 
@@ -513,54 +566,22 @@ public:
 
 
    template <typename TensorType>
-   __host__ void copy_sync(const TensorType& A) {
-      static_assert(!TensorType::unified_type());
-      static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
-      assert(same_extents(*this, A));
-
-      auto nbytes = size() * sizeof(T);
-      if constexpr(this->device_type() && A.device_type()) {
-         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice));
-
-      } else if constexpr(this->host_type() && A.device_type()) {
-         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyDeviceToHost));
-
-      } else if constexpr(this->device_type() && A.host_type()) {
-         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToDevice));
-
-      } else {
-         ASSERT_CUDA(cudaMemcpy(data(), A.data(), nbytes, cudaMemcpyHostToHost));
-      }
-   }
-
-
-   template <typename TensorType>
    __host__ void copy_async(const TensorType& A, cudaStream_t stream = 0) {
       static_assert(!TensorType::unified_type());
       static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
       assert(same_extents(*this, A));
 
-      auto nbytes = size() * sizeof(T);
       if constexpr(this->device_type() && A.device_type()) {
-         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToDevice, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyDeviceToDevice, stream));
 
       } else if constexpr(this->host_type() && A.device_type()) {
-         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyDeviceToHost, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyDeviceToHost, stream));
 
       } else if constexpr(this->device_type() && A.host_type()) {
-         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyHostToDevice, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyHostToDevice, stream));
 
       } else {
-         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), nbytes, cudaMemcpyHostToHost, stream));
-      }
-   }
-
-
-   __host__ void memset_sync(int val) {
-      if constexpr(this->device_type()) {
-         ASSERT_CUDA(cudaMemset(data(), val, size() * sizeof(T)));
-      } else {
-         std::memset(data(), val, size() * sizeof(T));
+         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyHostToHost, stream));
       }
    }
 

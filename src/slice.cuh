@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "base.cuh"
-#include "derived.cuh"
 
 namespace tnb {
 
