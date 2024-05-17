@@ -20,7 +20,7 @@ void index_tensor_6d(const Extents<6>& ext) {
 
 template <typename T>
 void index() {
-   Extents<6> ext1{5, 10, 15, 20, 25, 30};
+   Extents<6> ext1{2, 4, 8, 16, 32, 64};
    index_tensor_6d<Tensor<T, 6>>(ext1);
    index_tensor_6d<CudaTensor<T, 6>>(ext1);
    index_tensor_6d<UnifiedTensor<T, 6>>(ext1);

@@ -193,7 +193,7 @@ __host__ __device__ constexpr bool same_value_type() {
 
 template <typename T, typename... Ts>
 __host__ __device__ constexpr bool same_memory_kind() {
-   return (T::memory_kind() == Ts::memory_kind() && ...);
+   return ((T::memory_kind() == Ts::memory_kind()) && ...);
 }
 
 
@@ -338,6 +338,7 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ bool valid_index(index_t i, index_t d) const {
+      assert(d > -1 && d < dim);
       return i > -1 && i < ext_[d];
    }
 
@@ -595,7 +596,7 @@ public:
          ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyHostToDevice, stream));
 
       } else {
-         ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyHostToHost, stream));
+         static_assert_false<T>();
       }
    }
 
