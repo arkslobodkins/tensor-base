@@ -82,8 +82,14 @@ public:
    }
 
 
+   template <typename... Ints>
+   void resize(Ints... ext) {
+      this->resize(Extents<dim>{ext...});
+   }
+
+
    void swap(Tensor& A) noexcept {
-      ext_ = std::exchange(A.ext_, ext_);
+      std::swap(ext_, A.ext_);
       std::swap(data_, A.data_);
    }
 
@@ -190,6 +196,12 @@ public:
    }
 
 
+   template <typename... Ints>
+   __host__ void resize(Ints... ext) {
+      this->resize(Extents<Base::dimension()>{ext...});
+   }
+
+
    __host__ [[nodiscard]] auto* cuda_ptr() {
       ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
       return cuda_ptr_;
@@ -213,7 +225,7 @@ public:
 
 
    __host__ void swap(CudaTensorDerived& A) noexcept {
-      ext_ = std::exchange(A.ext_, ext_);
+      std::swap(ext_, A.ext_);
       std::swap(data_, A.data_);
    }
 

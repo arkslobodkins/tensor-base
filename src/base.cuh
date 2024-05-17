@@ -120,6 +120,21 @@ public:
    __host__ __device__ index_t size() const {
       return product_from(0);
    }
+
+
+   __host__ __device__ bool operator==(const Extents& ext) {
+      for(index_t i = 0; i < dim; ++i) {
+         if((*this)[i] != ext[i]) {
+            return false;
+         }
+      }
+      return true;
+   }
+
+
+   __host__ __device__ bool operator!=(const Extents& ext) {
+      return !(*this == ext);
+   }
 };
 
 
@@ -389,7 +404,6 @@ public:
 
    template <typename TensorType>
    __host__ void copy_sync(const TensorType& A) {
-      static_assert(!TensorType::unified_type());
       static_assert(std::is_same_v<value_type, ValueTypeOf<TensorType>>);
       assert(same_extents(*this, A));
 
