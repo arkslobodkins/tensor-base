@@ -15,6 +15,8 @@ void slice_tensor_types() {
    auto slice = lslice(A, 0);
    using value_type = ValueTypeOf<MatrixType>;
 
+   static_assert(same_memory_kind<MatrixType, decltype(slice)>());
+
    static_assert(std::is_same_v<decltype(slice(0)), value_type&>);
    static_assert(std::is_same_v<decltype(slice[0]), value_type&>);
 
