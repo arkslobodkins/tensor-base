@@ -7,6 +7,7 @@
 #include "index.cuh"
 #include "resize.cuh"
 #include "same.cuh"
+#include "slice.cuh"
 #include "swap.cuh"
 #include "test.cuh"
 #include "valid.cuh"
@@ -21,6 +22,7 @@ int main() {
    TEST(same);
    TEST(swap);
    TEST(copy);
+   TEST_ALL_FLOAT_TYPES(slice);
 
    return EXIT_SUCCESS;
 }

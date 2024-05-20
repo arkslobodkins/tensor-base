@@ -121,7 +121,6 @@ public:
       return product_from(0);
    }
 
-
    __host__ __device__ bool operator==(const Extents& ext) {
       for(index_t i = 0; i < dim; ++i) {
          if((*this)[i] != ext[i]) {
@@ -130,7 +129,6 @@ public:
       }
       return true;
    }
-
 
    __host__ __device__ bool operator!=(const Extents& ext) {
       return !(*this == ext);
@@ -596,6 +594,7 @@ public:
          ASSERT_CUDA(cudaMemcpyAsync(data(), A.data(), bytes(), cudaMemcpyHostToDevice, stream));
 
       } else {
+         // host to host copy is not asynchronous
          static_assert_false<T>();
       }
    }

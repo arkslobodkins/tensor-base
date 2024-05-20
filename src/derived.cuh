@@ -23,8 +23,7 @@ enum Allocator { Regular, Pinned };
 template <typename T, index_t dim, Allocator alloc = Regular>
 class Tensor : public LinearBase<T, dim, host> {
 public:
-   explicit Tensor() : Base{} {
-   }
+   explicit Tensor() = default;
 
 
    explicit Tensor(const Extents<dim>& ext) {

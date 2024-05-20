@@ -188,7 +188,7 @@ __host__ __device__ auto lblock(TensorType&& A, index_t first) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim>
-__host__ auto attach_host(T* data, const Extents<dim>& ext) {
+__host__ [[nodiscard]] auto attach_host(T* data, const Extents<dim>& ext) {
    if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
       return ConstTensorSlice<T, dim>(data, ext);
    } else {
@@ -198,7 +198,7 @@ __host__ auto attach_host(T* data, const Extents<dim>& ext) {
 
 
 template <typename T, index_t dim>
-__host__ __device__ auto attach_device(T* data, const Extents<dim>& ext) {
+__host__ __device__ [[nodiscard]] auto attach_device(T* data, const Extents<dim>& ext) {
    if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
       return ConstCudaTensorSlice<T, dim>(data, ext);
    } else {
