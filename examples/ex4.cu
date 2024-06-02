@@ -29,6 +29,7 @@ __host__ bool verify(const T& x, const typename T::value_type (&scalars)[M]) {
 
 
 int main() {
+   cudaSetDevice(0);
    // use scope so that cudaDeviceReset() is called after destructors completed
    {
       using T = float;

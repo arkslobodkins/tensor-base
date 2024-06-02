@@ -98,6 +98,11 @@ public:
    }
 
 
+   static constexpr auto allocator() {
+      return alloc;
+   }
+
+
 private:
    using Base = LinearBase<T, dim, host>;
    using Base::data_;

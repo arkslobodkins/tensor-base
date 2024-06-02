@@ -273,6 +273,7 @@ public:
    }
 
 
+   //  if size() is 0 then data() is nullptr, thus nullptr + 0 is safe
    __host__ __device__ cnd_ptr_t end() {
       return data() + size();
    }

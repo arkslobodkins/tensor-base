@@ -4,7 +4,6 @@
 
 int main() {
    using namespace tnb;
-   cudaSetDevice(0);
 
    int N = 100;
    Tensor<double, 4> A(N, N, N, N);
