@@ -5,9 +5,9 @@
 using namespace tnb;
 
 
-template <typename TensorType>
+template <typename TT>
 void index_tensor_6d(const Extents<6>& ext) {
-   TensorType A(ext);
+   TT A(ext);
    for(auto i = 0, count = 0; i < A.extent(0); ++i)
       for(auto j = 0; j < A.extent(1); ++j)
          for(auto k = 0; k < A.extent(2); ++k)

@@ -5,9 +5,9 @@
 using namespace tnb;
 
 
-template <typename TensorType, index_t... I>
+template <typename TT, index_t... I>
 void common_tensor() {
-   TensorType A(I...);
+   TT A(I...);
 
    static_assert(A.dimension() == sizeof...(I));
    assert(A.extents() == Extents<A.dimension()>(I...));
@@ -15,9 +15,9 @@ void common_tensor() {
    // the following are trivial and only tested for compilation
    (void)A.data();
    (void)A.empty();
-   (void)A.host_type();
-   (void)A.device_type();
-   (void)A.unified_type();
+   (void)A.is_host();
+   (void)A.is_device();
+   (void)A.is_unified();
    (void)A.memory_kind();
    (void)A.size();
    (void)A.bytes();

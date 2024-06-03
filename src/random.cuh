@@ -34,9 +34,9 @@ inline auto get_seed() {
 }
 
 
-template <typename Gen, typename TensorType>
-void rand_uniform(Gen& gen, TensorType& A) {
-   using T = ValueTypeOf<TensorType>;
+template <typename Gen, typename TT>
+void rand_uniform(Gen& gen, TT& A) {
+   using T = ValueTypeOf<TT>;
    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
    if constexpr(std::is_same_v<T, float>) {
       ASSERT_CURAND(curandGenerateUniform(gen, A.data(), A.size()));
@@ -49,12 +49,12 @@ void rand_uniform(Gen& gen, TensorType& A) {
 }  // namespace internal
 
 
-template <typename TensorType>
-void random(TensorType& A) {
+template <typename TT>
+void random(TT& A) {
    auto seed = internal::get_seed();
    curandGenerator_t gen;
 
-   if constexpr(TensorType::host_type()) {
+   if constexpr(TT::is_host()) {
       ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    } else {  // device or unified
       ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));

@@ -5,9 +5,9 @@
 using namespace tnb;
 
 
-template <typename TensorType, index_t... I>
+template <typename TT, index_t... I>
 void assign_tensor() {
-   TensorType A(I...), B(I...), C(I...);
+   TT A(I...), B(I...), C(I...);
    random(A);
 
    B = A;

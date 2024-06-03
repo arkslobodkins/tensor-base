@@ -11,11 +11,10 @@
 namespace tnb {
 
 
-template <typename TensorType1, typename TensorType2,
-          std::enable_if_t<!TensorType1::device_type() && !TensorType2::device_type(), bool> = true>
-__host__ bool operator==(const TensorType1& A, const TensorType2& B) {
-   static_assert(same_value_type<TensorType1, TensorType2>());
-   static_assert(same_memory_kind<TensorType1, TensorType2>());
+template <typename TT1, typename TT2, std::enable_if_t<!TT1::is_device() && !TT2::is_device(), bool> = true>
+__host__ bool operator==(const TT1& A, const TT2& B) {
+   static_assert(same_value_type<TT1, TT2>());
+   static_assert(same_memory_kind<TT1, TT2>());
 
    if(!same_extents(A, B)) {
       return false;
@@ -30,19 +29,18 @@ __host__ bool operator==(const TensorType1& A, const TensorType2& B) {
 
 
 // not optimized for efficiency, mainly for testing purposes
-template <typename TensorType1, typename TensorType2,
-          std::enable_if_t<TensorType1::device_type() && TensorType2::device_type(), bool> = true>
-__host__ bool operator==(const TensorType1& A, const TensorType2& B) {
-   Tensor<ValueTypeOf<TensorType1>, A.dimension()> Ahat(A.extents());
-   Tensor<ValueTypeOf<TensorType2>, B.dimension()> Bhat(B.extents());
+template <typename TT1, typename TT2, std::enable_if_t<TT1::is_device() && TT2::is_device(), bool> = true>
+__host__ bool operator==(const TT1& A, const TT2& B) {
+   Tensor<ValueTypeOf<TT1>, A.dimension()> Ahat(A.extents());
+   Tensor<ValueTypeOf<TT2>, B.dimension()> Bhat(B.extents());
    Ahat.copy_sync(A);
    Bhat.copy_sync(B);
    return Ahat == Bhat;
 }
 
 
-template <typename TensorType1, typename TensorType2>
-__host__ bool operator!=(const TensorType1& A, const TensorType2& B) {
+template <typename TT1, typename TT2>
+__host__ bool operator!=(const TT1& A, const TT2& B) {
    return !(A == B);
 }
 

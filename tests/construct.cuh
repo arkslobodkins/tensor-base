@@ -5,15 +5,15 @@
 using namespace tnb;
 
 
-template <typename TensorType, index_t... I>
+template <typename TT, index_t... I>
 void construct_tensor() {
-   TensorType A(I...);
+   TT A(I...);
    random(A);
 
-   TensorType B = A;
+   TT B = A;
    assert(A == B);
 
-   TensorType C = std::move(B);
+   TT C = std::move(B);
    assert(B.empty());
    assert(A == C);
 }

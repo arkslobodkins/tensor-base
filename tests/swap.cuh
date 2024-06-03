@@ -5,10 +5,10 @@
 using namespace tnb;
 
 
-template <typename TensorType>
+template <typename TT>
 void swap_tensor(const Extents<2>& ext1, const Extents<2>& ext2) {
-   TensorType A(ext1);
-   TensorType B(ext2);
+   TT A(ext1);
+   TT B(ext2);
    random(A);
    random(B);
 
@@ -19,9 +19,9 @@ void swap_tensor(const Extents<2>& ext1, const Extents<2>& ext2) {
 }
 
 
-template <typename TensorType>
+template <typename TT>
 void swap_tensor_self(const Extents<2>& ext) {
-   TensorType A(ext);
+   TT A(ext);
    random(A);
 
    auto A_old = A;

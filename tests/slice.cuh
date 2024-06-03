@@ -9,13 +9,13 @@
 using namespace tnb;
 
 
-template <typename MatrixType, index_t... I>
+template <typename MT, index_t... I>
 void slice_tensor_types() {
-   MatrixType A(I...);
+   MT A(I...);
    auto slice = lslice(A, 0);
-   using value_type = ValueTypeOf<MatrixType>;
+   using value_type = ValueTypeOf<MT>;
 
-   static_assert(same_memory_kind<MatrixType, decltype(slice)>());
+   static_assert(same_memory_kind<MT, decltype(slice)>());
 
    static_assert(std::is_same_v<decltype(slice(0)), value_type&>);
    static_assert(std::is_same_v<decltype(slice[0]), value_type&>);
@@ -40,11 +40,11 @@ void slice_tensor_types() {
 }
 
 
-template <typename MatrixType, index_t... I>
+template <typename MT, index_t... I>
 void const_slice_tensor_types() {
-   const MatrixType A(I...);
+   const MT A(I...);
    auto slice = lslice(A, 0);
-   using value_type = ValueTypeOf<MatrixType>;
+   using value_type = ValueTypeOf<MT>;
 
    static_assert(std::is_same_v<decltype(slice(0)), const value_type&>);
    static_assert(std::is_same_v<decltype(slice[0]), const value_type&>);
@@ -76,15 +76,15 @@ void attach_tensor() {
 }
 
 
-template <typename MatrixType, typename TensorType>
+template <typename MT, typename TT>
 void lslice_tensor(index_t n) {
-   MatrixType M[n];
+   MT M[n];
    for(index_t i = 0; i < n; ++i) {
       M[i].resize(3, 4);
       random(M[i]);
    }
 
-   TensorType A(n, 3, 4);
+   TT A(n, 3, 4);
    for(index_t i = 0; i < n; ++i) {
       lslice(A, i).copy_sync(M[i]);
       assert(lslice(A, i) == M[i]);

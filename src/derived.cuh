@@ -21,7 +21,7 @@ enum Allocator { Regular, Pinned };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim, Allocator alloc = Regular>
-class Tensor : public LinearBase<T, dim, host> {
+class Tensor : public LinearBase<T, dim, host, false, (alloc == Pinned)> {
 public:
    explicit Tensor() = default;
 
@@ -104,7 +104,7 @@ public:
 
 
 private:
-   using Base = LinearBase<T, dim, host>;
+   using Base = LinearBase<T, dim, host, false, (alloc == Pinned)>;
    using Base::data_;
    using Base::ext_;
 
@@ -246,9 +246,9 @@ private:
 
    void Allocate(const Extents<Base::dimension()>& ext) {
       if(ext.size()) {
-         if constexpr(this->device_type()) {
+         if constexpr(this->is_device()) {
             ASSERT_CUDA(cudaMalloc(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
-         } else if constexpr(this->unified_type()) {
+         } else if constexpr(this->is_unified()) {
             ASSERT_CUDA(cudaMallocManaged(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
          } else {
             static_assert_false<Base>();

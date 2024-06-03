@@ -5,11 +5,11 @@
 using namespace tnb;
 
 
-template <typename TensorType, index_t... I>
+template <typename TT, index_t... I>
 void resize_tensor() {
-   TensorType A;
+   TT A;
    A.resize(I...);
-   assert(A.extents() == Extents<TensorType::dimension()>{I...});
+   assert(A.extents() == Extents<TT::dimension()>{I...});
 }
 
 

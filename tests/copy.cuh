@@ -7,10 +7,10 @@
 using namespace tnb;
 
 
-template <typename TensorType>
+template <typename TT>
 void memset_tensor_sync(const Extents<2>& ext) {
-   TensorType A(ext);
-   Tensor<ValueTypeOf<TensorType>, 2> ATest(ext);
+   TT A(ext);
+   Tensor<ValueTypeOf<TT>, 2> ATest(ext);
 
    A.memset_sync(-1);
    ATest.copy_sync(A);
@@ -20,10 +20,10 @@ void memset_tensor_sync(const Extents<2>& ext) {
 }
 
 
-template <typename TensorType1, typename TensorType2>
+template <typename TT1, typename TT2>
 void copy_tensor_sync(const Extents<2>& ext) {
-   TensorType1 A(ext), A_back(ext);
-   TensorType2 B(ext);
+   TT1 A(ext), A_back(ext);
+   TT2 B(ext);
    random(A);
 
    B.copy_sync(A);
@@ -32,10 +32,10 @@ void copy_tensor_sync(const Extents<2>& ext) {
 }
 
 
-template <typename TensorType1, typename TensorType2>
+template <typename TT1, typename TT2>
 void copy_tensor_async(const Extents<2>& ext) {
-   TensorType1 A(ext), A_back(ext);
-   TensorType2 B(ext);
+   TT1 A(ext), A_back(ext);
+   TT2 B(ext);
    random(A);
 
    B.copy_async(A);
@@ -52,7 +52,7 @@ void copy() {
    memset_tensor_sync<CudaMatrix<int>>(ext);
 
    using T = float;
-   using MH = Matrix<T>;
+   using MH = Matrix<T, Pinned>;
    using MD = CudaMatrix<T>;
    using MU = UnifiedMatrix<T>;
 
