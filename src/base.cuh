@@ -429,7 +429,7 @@ public:
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false, bool is_pinned_v = false>
 class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr> {
    static_assert(scheme == host || scheme == device);
-   static_assert(is_pinned_v == false || scheme == host);
+   static_assert(is_pinned_v == true ? (scheme == host) : true);
 
 private:
    using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr>;
