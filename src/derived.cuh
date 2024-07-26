@@ -33,7 +33,7 @@ public:
    }
 
 
-   template <typename... Ints, std::enable_if_t<(... && is_actually_integer<Ints>()), bool> = true>
+   template <typename... Ints, std::enable_if_t<(... && is_compatible_integer<Ints>()), bool> = true>
    explicit Tensor(Ints... ext) : Tensor{Extents<dim>{ext...}} {
    }
 

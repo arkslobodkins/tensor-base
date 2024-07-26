@@ -13,7 +13,7 @@ namespace tnb {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_v = false>
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_v>
 class TensorSliceBase : public LinearBase<T, dim, scheme, is_const_ptr, is_pinned_v> {
 public:
    __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
@@ -70,9 +70,9 @@ public:
 
 
 template <typename T, index_t dim>
-class CudaTensorSlice : public TensorSliceBase<T, dim, device, false> {
+class CudaTensorSlice : public TensorSliceBase<T, dim, device, false, false> {
 public:
-   using TensorSliceBase<T, dim, device, false>::TensorSliceBase;
+   using TensorSliceBase<T, dim, device, false, false>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;
@@ -88,9 +88,9 @@ public:
 
 
 template <typename T, index_t dim>
-class ConstCudaTensorSlice : public TensorSliceBase<T, dim, device, true> {
+class ConstCudaTensorSlice : public TensorSliceBase<T, dim, device, true, false> {
 public:
-   using TensorSliceBase<T, dim, device, true>::TensorSliceBase;
+   using TensorSliceBase<T, dim, device, true, false>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;
@@ -150,7 +150,7 @@ __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t 
 template <typename TT, typename... Ints>
 __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
    static_assert(std::is_lvalue_reference_v<TT>);
-   constexpr auto out_dim = SizeOfCast<Ints...>();
+   constexpr auto out_dim = sizeof_cast<Ints...>();
    constexpr auto in_dim = A.dimension() - out_dim;
    static_assert(out_dim < A.dimension());
    static_assert(in_dim > 0);
