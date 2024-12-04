@@ -69,7 +69,7 @@ __host__ __device__ constexpr bool same_memory_kind() {
 }
 
 
-enum Scheme { host, device, unified };
+enum Scheme { Host, Device, Unified };
 
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
@@ -87,7 +87,7 @@ protected:
 
    __host__ __device__ static void validate_host_type() {
 #ifdef __CUDA_ARCH__
-      if constexpr(scheme == host) {
+      if constexpr(scheme == Host) {
          __device__ void not_callable_on_device_error();
          not_callable_on_device_error();
       }
@@ -96,7 +96,7 @@ protected:
 
    __host__ __device__ static void validate_device_type() {
 #ifndef __CUDA_ARCH__
-      if constexpr(scheme != host) {
+      if constexpr(scheme != Host) {
          __host__ void not_callable_on_host_error();
          not_callable_on_host_error();
       }
@@ -162,17 +162,17 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ static constexpr bool is_host() {
-      return scheme == host;
+      return scheme == Host;
    }
 
 
    __host__ __device__ static constexpr bool is_device() {
-      return scheme == device;
+      return scheme == Device;
    }
 
 
    __host__ __device__ static constexpr bool is_unified() {
-      return scheme == unified;
+      return scheme == Unified;
    }
 
 
@@ -314,8 +314,8 @@ protected:
    using Base::ext_;
 
 public:
-   static_assert(scheme == host || scheme == device);
-   static_assert(is_pinned_mem == true ? (scheme == host) : true);
+   static_assert(scheme == Host || scheme == Device);
+   static_assert(is_pinned_mem == true ? (scheme == Host) : true);
 
    using typename Base::size_type;
    using typename Base::value_type;

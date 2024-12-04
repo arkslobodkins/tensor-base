@@ -42,7 +42,7 @@ private:
 
 
 template <typename T, index_t dim, bool is_const_ptr>
-class UnifiedTensorSliceBase : public LinearBaseCommon<T, dim, unified, is_const_ptr> {
+class UnifiedTensorSliceBase : public LinearBaseCommon<T, dim, Unified, is_const_ptr> {
 public:
    __host__ __device__ explicit UnifiedTensorSliceBase(
        std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
@@ -60,23 +60,23 @@ public:
        = delete;
 
 private:
-   using LinearBaseCommon<T, dim, unified, is_const_ptr>::ext_;
-   using LinearBaseCommon<T, dim, unified, is_const_ptr>::data_;
+   using LinearBaseCommon<T, dim, Unified, is_const_ptr>::ext_;
+   using LinearBaseCommon<T, dim, Unified, is_const_ptr>::data_;
 };
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim, bool is_pinned_mem>
-class TensorSlice : public TensorSliceBase<T, dim, host, false, is_pinned_mem> {
+class TensorSlice : public TensorSliceBase<T, dim, Host, false, is_pinned_mem> {
 public:
-   using TensorSliceBase<T, dim, host, false, is_pinned_mem>::TensorSliceBase;
+   using TensorSliceBase<T, dim, Host, false, is_pinned_mem>::TensorSliceBase;
 };
 
 
 template <typename T, index_t dim>
-class CudaTensorSlice : public TensorSliceBase<T, dim, device, false, false> {
+class CudaTensorSlice : public TensorSliceBase<T, dim, Device, false, false> {
 public:
-   using TensorSliceBase<T, dim, device, false, false>::TensorSliceBase;
+   using TensorSliceBase<T, dim, Device, false, false>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;
@@ -85,16 +85,16 @@ public:
 
 
 template <typename T, index_t dim, bool is_pinned_mem>
-class ConstTensorSlice : public TensorSliceBase<T, dim, host, true, is_pinned_mem> {
+class ConstTensorSlice : public TensorSliceBase<T, dim, Host, true, is_pinned_mem> {
 public:
-   using TensorSliceBase<T, dim, host, true, is_pinned_mem>::TensorSliceBase;
+   using TensorSliceBase<T, dim, Host, true, is_pinned_mem>::TensorSliceBase;
 };
 
 
 template <typename T, index_t dim>
-class ConstCudaTensorSlice : public TensorSliceBase<T, dim, device, true, false> {
+class ConstCudaTensorSlice : public TensorSliceBase<T, dim, Device, true, false> {
 public:
-   using TensorSliceBase<T, dim, device, true, false>::TensorSliceBase;
+   using TensorSliceBase<T, dim, Device, true, false>::TensorSliceBase;
 
    __host__ [[nodiscard]] auto pass() const {
       return *this;
