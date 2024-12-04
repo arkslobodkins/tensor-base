@@ -114,12 +114,6 @@ public:
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   LinearBaseCommon() = default;
-   LinearBaseCommon(const LinearBaseCommon&) = default;
-   LinearBaseCommon& operator=(const LinearBaseCommon&) = default;
-
-
-   ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ cnd_ptr_t data() {
       return this->size() == 0 ? nullptr : data_;
    }
@@ -310,7 +304,7 @@ public:
 
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
-          bool is_pinned_v = false>
+          bool is_pinned_mem = false>
 class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr> {
 private:
    using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr>;
@@ -321,16 +315,10 @@ protected:
 
 public:
    static_assert(scheme == host || scheme == device);
-   static_assert(is_pinned_v == true ? (scheme == host) : true);
+   static_assert(is_pinned_mem == true ? (scheme == host) : true);
 
-   using size_type = index_t;
-   using value_type = T;
-
-
-   ////////////////////////////////////////////////////////////////////////////////////////////////
-   LinearBase() = default;
-   LinearBase(const LinearBase&) = default;
-   LinearBase& operator=(const LinearBase&) = default;
+   using typename Base::size_type;
+   using typename Base::value_type;
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -464,7 +452,7 @@ public:
 
    static constexpr __host__ __device__ bool is_pinned() {
       static_assert(Base::is_host());
-      return is_pinned_v;
+      return is_pinned_mem;
    }
 
 

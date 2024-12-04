@@ -12,12 +12,15 @@
 namespace tnb {
 
 
+namespace internal {
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_v>
-class TensorSliceBase : public LinearBase<T, dim, scheme, is_const_ptr, is_pinned_v> {
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_mem>
+class TensorSliceBase : public LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem> {
 public:
-   __host__ __device__ explicit TensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
-                                                const Extents<dim>& ext) {
+   __host__ __device__ explicit TensorSliceBase(
+       std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
       TENSOR_VALIDATE_HOST_DEBUG;
       assert(valid_extents(ext));
       data_ = data;
@@ -33,16 +36,16 @@ public:
    __host__ __device__ TensorSliceBase& operator=(const TensorSliceBase&) = delete;
 
 private:
-   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_v>::ext_;
-   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_v>::data_;
+   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem>::ext_;
+   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem>::data_;
 };
 
 
 template <typename T, index_t dim, bool is_const_ptr>
 class UnifiedTensorSliceBase : public LinearBaseCommon<T, dim, unified, is_const_ptr> {
 public:
-   __host__ __device__ explicit UnifiedTensorSliceBase(std::conditional_t<is_const_ptr, const T*, T*> data,
-                                                       const Extents<dim>& ext) {
+   __host__ __device__ explicit UnifiedTensorSliceBase(
+       std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
       assert(valid_extents(ext));
       data_ = data;
       ext_ = ext;
@@ -53,7 +56,8 @@ public:
       ext_ = A.ext_;
    }
 
-   __host__ __device__ UnifiedTensorSliceBase& operator=(const UnifiedTensorSliceBase&) = delete;
+   __host__ __device__ UnifiedTensorSliceBase& operator=(const UnifiedTensorSliceBase&)
+       = delete;
 
 private:
    using LinearBaseCommon<T, dim, unified, is_const_ptr>::ext_;
@@ -62,10 +66,10 @@ private:
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename T, index_t dim, bool is_pinned_v>
-class TensorSlice : public TensorSliceBase<T, dim, host, false, is_pinned_v> {
+template <typename T, index_t dim, bool is_pinned_mem>
+class TensorSlice : public TensorSliceBase<T, dim, host, false, is_pinned_mem> {
 public:
-   using TensorSliceBase<T, dim, host, false, is_pinned_v>::TensorSliceBase;
+   using TensorSliceBase<T, dim, host, false, is_pinned_mem>::TensorSliceBase;
 };
 
 
@@ -80,10 +84,10 @@ public:
 };
 
 
-template <typename T, index_t dim, bool is_pinned_v>
-class ConstTensorSlice : public TensorSliceBase<T, dim, host, true, is_pinned_v> {
+template <typename T, index_t dim, bool is_pinned_mem>
+class ConstTensorSlice : public TensorSliceBase<T, dim, host, true, is_pinned_mem> {
 public:
-   using TensorSliceBase<T, dim, host, true, is_pinned_v>::TensorSliceBase;
+   using TensorSliceBase<T, dim, host, true, is_pinned_mem>::TensorSliceBase;
 };
 
 
@@ -121,29 +125,30 @@ public:
 };
 
 
-namespace internal {
 template <typename TT, index_t in_dim>
 __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t offset) {
    using T = typename std::remove_reference_t<TT>::value_type;
    if constexpr(std::is_const_v<std::remove_reference_t<TT>>) {
       if constexpr(A.is_host()) {
-         return ConstTensorSlice<T, in_dim, A.is_pinned()>(A.data() + offset, ext);
+         return ConstTensorSlice<T, in_dim, A.is_pinned()>{A.data() + offset, ext};
       } else if constexpr(A.is_device()) {
-         return ConstCudaTensorSlice<T, in_dim>(A.data() + offset, ext);
+         return ConstCudaTensorSlice<T, in_dim>{A.data() + offset, ext};
       } else {
-         return UnifiedConstTensorSlice<T, in_dim>(A.data() + offset, ext);
+         return UnifiedConstTensorSlice<T, in_dim>{A.data() + offset, ext};
       }
 
    } else {
       if constexpr(A.is_host()) {
-         return TensorSlice<T, in_dim, A.is_pinned()>(A.data() + offset, ext);
+         return TensorSlice<T, in_dim, A.is_pinned()>{A.data() + offset, ext};
       } else if constexpr(A.is_device()) {
-         return CudaTensorSlice<T, in_dim>(A.data() + offset, ext);
+         return CudaTensorSlice<T, in_dim>{A.data() + offset, ext};
       } else {
-         return UnifiedTensorSlice<T, in_dim>(A.data() + offset, ext);
+         return UnifiedTensorSlice<T, in_dim>{A.data() + offset, ext};
       }
    }
 }
+
+
 }  // namespace internal
 
 
@@ -190,9 +195,9 @@ __host__ __device__ auto lblock(TT&& A, index_t first) {
 template <typename T, index_t dim>
 __host__ [[nodiscard]] auto attach_host(T* data, const Extents<dim>& ext) {
    if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
-      return ConstTensorSlice<T, dim, true>(data, ext);
+      return internal::ConstTensorSlice<T, dim, true>{data, ext};
    } else {
-      return TensorSlice<T, dim, true>(data, ext);
+      return internal::TensorSlice<T, dim, true>{data, ext};
    }
 }
 
@@ -200,9 +205,9 @@ __host__ [[nodiscard]] auto attach_host(T* data, const Extents<dim>& ext) {
 template <typename T, index_t dim>
 __host__ __device__ [[nodiscard]] auto attach_device(T* data, const Extents<dim>& ext) {
    if constexpr(std::is_const_v<std::remove_pointer_t<T>>) {
-      return ConstCudaTensorSlice<T, dim>(data, ext);
+      return internal::ConstCudaTensorSlice<T, dim>{data, ext};
    } else {
-      return CudaTensorSlice<T, dim>(data, ext);
+      return internal::CudaTensorSlice<T, dim>{data, ext};
    }
 }
 
