@@ -17,7 +17,6 @@ template <typename TT,
           std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 1), bool>
           = true>
 std::ostream& operator<<(std::ostream& os, const TT& A) {
-   os << std::fixed << std::setprecision(7);
    for(index_t i = 0; i < A.extent(0); ++i) {
       os << A(i) << " ";
    }

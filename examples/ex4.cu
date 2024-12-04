@@ -48,7 +48,7 @@ int main() {
       for(int i = 0; i < M; ++i) {
          ASSERT_CUDA(cudaStreamCreate(&streams[i]));
          ASSERT_CUDA(cudaMallocAsync(&xd[i], sub_ext.size() * sizeof(T), streams[i]));
-         auto x_gpu = attach_device(xd[i], sub_ext);  // Using xd[i] is safe.
+         auto x_gpu = attach_device(xd[i], sub_ext);
 
          x_gpu.copy_async(lslice(x, i), streams[i]);
          // Launch with few threads and blocks to notice the benefit of streams.

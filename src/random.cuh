@@ -13,9 +13,9 @@
 #include "base.cuh"
 
 
-#define ASSERT_CURAND(curandCall)                                                        \
+#define ASSERT_CURAND(curand_call)                                                       \
    do {                                                                                  \
-      curandStatus_t error = curandCall;                                                 \
+      curandStatus_t error = curand_call;                                                \
       if(error != CURAND_STATUS_SUCCESS) {                                               \
          std::fprintf(stderr, "CURAND error on line %i, file %s\n", __LINE__, __FILE__); \
          std::exit(EXIT_FAILURE);                                                        \
@@ -27,6 +27,8 @@ namespace tnb {
 
 
 namespace internal {
+
+
 inline auto get_seed() {
    using namespace std::chrono;
    auto duration = system_clock::now().time_since_epoch();
