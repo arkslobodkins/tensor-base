@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-#include "../src/tensor.cuh"
+#include "../src/tnb.cuh"
 
 int main() {
    using namespace tnb;

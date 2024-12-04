@@ -3,7 +3,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "../src/tensor.cuh"
+#include "../src/tnb.cuh"
 
 using namespace tnb;
 

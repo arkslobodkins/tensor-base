@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "../src/tensor.cuh"
+#include "../src/tnb.cuh"
 
 using namespace tnb;
 

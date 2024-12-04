@@ -4,7 +4,7 @@
 #include <numeric>
 #include <type_traits>
 
-#include "../src/tensor.cuh"
+#include "../src/tnb.cuh"
 
 using namespace tnb;
 
