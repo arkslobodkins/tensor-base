@@ -30,7 +30,7 @@ __host__ bool verify(const T& x, const typename T::value_type (&scalars)[M]) {
 
 int main() {
    cudaSetDevice(0);
-   // use scope so that cudaDeviceReset() is called after destructors completed
+   // Use scope so that cudaDeviceReset() is called after destructors completed.
    {
       using T = float;
       constexpr int M = 4;
@@ -48,10 +48,10 @@ int main() {
       for(int i = 0; i < M; ++i) {
          ASSERT_CUDA(cudaStreamCreate(&streams[i]));
          ASSERT_CUDA(cudaMallocAsync(&xd[i], sub_ext.size() * sizeof(T), streams[i]));
-         auto x_gpu = attach_device(xd[i], sub_ext);  // using xd[i] is safe
+         auto x_gpu = attach_device(xd[i], sub_ext);  // Using xd[i] is safe.
 
          x_gpu.copy_async(lslice(x, i), streams[i]);
-         // launch with few threads and blocks to notice the benefit of streams
+         // Launch with few threads and blocks to notice the benefit of streams.
          add_scalar<<<8, 8, 0, streams[i]>>>(x_gpu, scalars[i]);
          lslice(x, i).copy_async(x_gpu, streams[i]);
 

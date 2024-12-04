@@ -4,29 +4,17 @@
 #pragma once
 
 
-#include <cuda_runtime.h>
-
 #include <cassert>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
-#include <limits>
 #include <type_traits>
 
-
-#define ASSERT_CUDA(cudaCall)                                                                           \
-   do {                                                                                                 \
-      cudaError_t error = cudaCall;                                                                     \
-      if(error != cudaSuccess) {                                                                        \
-         std::fprintf(                                                                                  \
-             stderr, "Error on line %i, file %s: %s\n", __LINE__, __FILE__, cudaGetErrorString(error)); \
-         std::exit(EXIT_FAILURE);                                                                       \
-      }                                                                                                 \
-   } while(0)
+#include "common.cuh"
+#include "extents.cuh"
 
 
-#define TENSOR_STATIC_ASSERT_DIMENSION() \
-   static_assert(sizeof...(Ints) == dim, "index dimension must be equal to the dimension of the tensor")
+#define TENSOR_STATIC_ASSERT_DIMENSION()                       \
+   static_assert(static_cast<index_t>(sizeof...(Ints)) == dim, \
+                 "index dimension must be equal to the dimension of the tensor")
 
 
 #ifndef NDEBUG
@@ -46,92 +34,8 @@
 namespace tnb {
 
 
-using index_t = long int;
-
-
 template <typename T>
 using ValueTypeOf = typename T::value_type;
-
-
-template <typename... Types>
-__host__ __device__ constexpr index_t sizeof_cast() {
-   return static_cast<index_t>(sizeof...(Types));
-}
-
-
-template <typename IntType>
-__host__ __device__ constexpr index_t index_cast(IntType i) {
-   return static_cast<index_t>(i);
-}
-
-
-template <typename T>
-__host__ __device__ constexpr bool is_compatible_integer() {
-   return std::is_same_v<short int, T> || std::is_same_v<unsigned short int, T> || std::is_same_v<int, T>
-       || std::is_same_v<unsigned int, T> || std::is_same_v<long int, T>;
-}
-
-
-template <typename T>
-__host__ __device__ constexpr void static_assert_false() {
-   static_assert(!sizeof(T));
-}
-
-
-template <index_t dim>
-struct Extents {
-   static_assert(dim > 0);
-
-private:
-   index_t x_[dim]{};
-
-public:
-   explicit Extents() = default;
-   Extents(const Extents&) = default;
-   Extents& operator=(const Extents&) = default;
-
-   template <typename... Ints>
-   __host__ __device__ constexpr Extents(Ints... ext) : x_{ext...} {
-      static_assert((... && is_compatible_integer<Ints>()));
-      static_assert(sizeof_cast<Ints...>() == dim);
-   }
-
-   __host__ __device__ index_t& operator[](index_t d) {
-      assert(d > -1 && d < dim);
-      return x_[d];
-   }
-
-   __host__ __device__ const index_t& operator[](index_t d) const {
-      assert(d > -1 && d < dim);
-      return x_[d];
-   }
-
-   __host__ __device__ index_t product_from(index_t n) const {
-      assert(n > -1 && n <= dim);  // n = dim is allowed
-      index_t p = 1;
-      for(index_t d = n; d < dim; ++d) {
-         p *= x_[d];
-      }
-      return p;
-   }
-
-   __host__ __device__ index_t size() const {
-      return product_from(0);
-   }
-
-   __host__ __device__ bool operator==(const Extents& ext) {
-      for(index_t i = 0; i < dim; ++i) {
-         if((*this)[i] != ext[i]) {
-            return false;
-         }
-      }
-      return true;
-   }
-
-   __host__ __device__ bool operator!=(const Extents& ext) {
-      return !(*this == ext);
-   }
-};
 
 
 template <typename First, typename Second, typename... TensorTypes>
@@ -153,34 +57,6 @@ __host__ __device__ bool same_extents(const First& first, const Second& second,
 }
 
 
-template <typename... Ints>
-__host__ __device__ bool valid_extents(Ints... ext) {
-   // non-negative and either all zero or nonzero
-   return (... && (ext > -1)) && ((... && (ext != 0)) || (... && (ext == 0)));
-}
-
-
-template <index_t dim>
-__host__ __device__ bool valid_extents(const Extents<dim>& ext) {
-   for(index_t d = 0; d < dim; ++d) {
-      if(ext[d] < 0) {
-         return false;
-      }
-   }
-
-   bool cnd = (ext[0] == 0);
-   for(index_t d = 1; d < dim; ++d) {
-      if((ext[d] == 0) ^ cnd) {
-         return false;
-      }
-   }
-   return true;
-}
-
-
-enum Scheme { host, device, unified };
-
-
 template <typename T, typename... Ts>
 __host__ __device__ constexpr bool same_value_type() {
    return (std::is_same_v<ValueTypeOf<T>, ValueTypeOf<Ts>> && ...);
@@ -191,6 +67,9 @@ template <typename T, typename... Ts>
 __host__ __device__ constexpr bool same_memory_kind() {
    return ((T::memory_kind() == Ts::memory_kind()) && ...);
 }
+
+
+enum Scheme { host, device, unified };
 
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false>
@@ -217,7 +96,7 @@ protected:
 
    __host__ __device__ static void validate_device_type() {
 #ifndef __CUDA_ARCH__
-      if constexpr(!scheme == host) {
+      if constexpr(scheme != host) {
          __host__ void not_callable_on_host_error();
          not_callable_on_host_error();
       }
@@ -235,7 +114,7 @@ public:
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   explicit LinearBaseCommon() = default;
+   LinearBaseCommon() = default;
    LinearBaseCommon(const LinearBaseCommon&) = default;
    LinearBaseCommon& operator=(const LinearBaseCommon&) = default;
 
@@ -271,7 +150,7 @@ public:
    }
 
 
-   //  if size() is 0 then data() is nullptr, thus nullptr + 0 is safe
+   //  If size() is 0 then data() is nullptr, thus nullptr + 0 is safe.
    __host__ __device__ cnd_ptr_t end() {
       return this->data() + this->size();
    }
@@ -342,13 +221,13 @@ public:
 
    template <index_t in_dim, typename First, typename... Ints>
    __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
-      static_assert(is_compatible_integer<First>());
-      assert(this->valid_index(first, in_dim - 1 - sizeof_cast<Ints...>()));
+      static_assert(internal::is_compatible_integer<First>());
+      assert(this->valid_index(first, in_dim - 1 - internal::sizeof_cast<Ints...>()));
 
       if constexpr(sizeof...(Ints) == 0) {
          return first * ext_.product_from(in_dim);
       } else {
-         return first * ext_.product_from(in_dim - sizeof_cast<Ints...>())
+         return first * ext_.product_from(in_dim - internal::sizeof_cast<Ints...>())
               + this->offset_of<in_dim, Ints...>(indexes...);
       }
    }
@@ -376,16 +255,16 @@ public:
 
    template <typename Int>
    __host__ __device__ cnd_ref_t operator[](Int i) {
-      static_assert(is_compatible_integer<Int>());
-      assert(index_cast(i) > -1 && index_cast(i) < this->size());
+      static_assert(internal::is_compatible_integer<Int>());
+      assert(internal::index_cast(i) > -1 && internal::index_cast(i) < this->size());
       return data_[i];
    }
 
 
    template <typename Int>
    __host__ __device__ const_ref_t operator[](Int i) const {
-      static_assert(is_compatible_integer<Int>());
-      assert(index_cast(i) > -1 && index_cast(i) < this->size());
+      static_assert(internal::is_compatible_integer<Int>());
+      assert(internal::index_cast(i) > -1 && internal::index_cast(i) < this->size());
       return data_[i];
    }
 
@@ -394,7 +273,7 @@ public:
       if constexpr(this->is_host()) {
          std::memset(this->data(), val, this->size() * sizeof(T));
       } else {
-         // set on device for unified memory type
+         // Set on device for unified memory type.
          ASSERT_CUDA(cudaMemset(this->data(), val, this->size() * sizeof(T)));
       }
    }
@@ -406,31 +285,33 @@ public:
       assert(same_extents(*this, A));
 
       if constexpr(this->is_device() && A.is_device()) {
-         ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
+         ASSERT_CUDA(
+             cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
 
       } else if constexpr(this->is_host() && A.is_device()) {
-         ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToHost));
+         ASSERT_CUDA(
+             cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToHost));
 
       } else if constexpr(this->is_device() && A.is_host()) {
-         ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyHostToDevice));
+         ASSERT_CUDA(
+             cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyHostToDevice));
 
       } else if constexpr(this->is_host() && A.is_host()) {
          ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyHostToHost));
       } else if constexpr(this->is_unified() && A.is_unified()) {
-         ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
+         ASSERT_CUDA(
+             cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
       } else {
-         // copy_sync is allowed for unified memory types only if both types are unified
-         static_assert_false<T>();
+         // copy_sync is allowed for unified memory types only if both types are unified.
+         internal::static_assert_false<T>();
       }
    }
 };
 
 
-template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false, bool is_pinned_v = false>
+template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
+          bool is_pinned_v = false>
 class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr> {
-   static_assert(scheme == host || scheme == device);
-   static_assert(is_pinned_v == true ? (scheme == host) : true);
-
 private:
    using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr>;
 
@@ -439,12 +320,15 @@ protected:
    using Base::ext_;
 
 public:
+   static_assert(scheme == host || scheme == device);
+   static_assert(is_pinned_v == true ? (scheme == host) : true);
+
    using size_type = index_t;
    using value_type = T;
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
-   explicit LinearBase() = default;
+   LinearBase() = default;
    LinearBase(const LinearBase&) = default;
    LinearBase& operator=(const LinearBase&) = default;
 
@@ -591,20 +475,22 @@ public:
       assert(same_extents(*this, A));
 
       if constexpr(this->is_device() && A.is_device()) {
-         ASSERT_CUDA(
-             cudaMemcpyAsync(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(
+             this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice, stream));
 
       } else if constexpr(this->is_host() && A.is_device()) {
          static_assert(this->is_pinned());
-         ASSERT_CUDA(cudaMemcpyAsync(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToHost, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(
+             this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToHost, stream));
 
       } else if constexpr(this->is_device() && A.is_host()) {
          static_assert(A.is_pinned());
-         ASSERT_CUDA(cudaMemcpyAsync(this->data(), A.data(), this->bytes(), cudaMemcpyHostToDevice, stream));
+         ASSERT_CUDA(cudaMemcpyAsync(
+             this->data(), A.data(), this->bytes(), cudaMemcpyHostToDevice, stream));
 
       } else {
-         // host to host copy is not asynchronous
-         static_assert_false<T>();
+         // Host to host copy is not asynchronous.
+         internal::static_assert_false<T>();
       }
    }
 

@@ -12,7 +12,7 @@ void common_tensor() {
    static_assert(A.dimension() == sizeof...(I));
    assert(A.extents() == Extents<A.dimension()>(I...));
 
-   // the following are trivial and only tested for compilation
+   // The following are trivial and only tested for compilation.
    (void)A.data();
    (void)A.empty();
    (void)A.is_host();

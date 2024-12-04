@@ -56,7 +56,7 @@ void random(TT& A) {
 
    if constexpr(TT::is_host()) {
       ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
-   } else {  // device or unified
+   } else {  // Device or unified.
       ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    }
    ASSERT_CURAND(curandSetPseudoRandomGeneratorSeed(gen, seed));

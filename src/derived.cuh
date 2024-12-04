@@ -23,7 +23,7 @@ enum Allocator { Regular, Pinned };
 template <typename T, index_t dim, Allocator alloc = Regular>
 class Tensor : public LinearBase<T, dim, host, false, (alloc == Pinned)> {
 public:
-   explicit Tensor() = default;
+   Tensor() = default;
 
 
    explicit Tensor(const Extents<dim>& ext) {
@@ -33,7 +33,8 @@ public:
    }
 
 
-   template <typename... Ints, std::enable_if_t<(... && is_compatible_integer<Ints>()), bool> = true>
+   template <typename... Ints,
+             std::enable_if_t<(... && internal::is_compatible_integer<Ints>()), bool> = true>
    explicit Tensor(Ints... ext) : Tensor{Extents<dim>{ext...}} {
    }
 
@@ -137,12 +138,13 @@ private:
 template <typename Base>
 class CudaTensorDerived : public Base {
 public:
-   __host__ explicit CudaTensorDerived() : Base{} {
+   __host__ CudaTensorDerived() : Base{} {
       ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensorDerived)));
    }
 
 
-   __host__ explicit CudaTensorDerived(const Extents<Base::dimension()>& ext) : CudaTensorDerived{} {
+   __host__ explicit CudaTensorDerived(const Extents<Base::dimension()>& ext)
+       : CudaTensorDerived{} {
       assert(valid_extents(ext));
       ext_ = {ext};
       this->Allocate(ext);
@@ -150,7 +152,8 @@ public:
 
 
    template <typename... Ints>
-   __host__ explicit CudaTensorDerived(Ints... ext) : CudaTensorDerived{Extents<Base::dimension()>{ext...}} {
+   __host__ explicit CudaTensorDerived(Ints... ext)
+       : CudaTensorDerived{Extents<Base::dimension()>{ext...}} {
    }
 
 
@@ -168,7 +171,8 @@ public:
    __host__ CudaTensorDerived& operator=(const CudaTensorDerived& A) {
       assert(same_extents(*this, A));
       if(this != &A) {
-         ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
+         ASSERT_CUDA(
+             cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDeviceToDevice));
       }
       return *this;
    }
@@ -193,7 +197,7 @@ public:
    __host__ void resize(const Extents<Base::dimension()>& ext) {
       assert(valid_extents(ext));
       ASSERT_CUDA(cudaFree(data_));
-      data_ = nullptr;  // avoid double free if ext is zeros
+      data_ = nullptr;  // Avoid double free if ext is zeros.
 
       this->Allocate(ext);
       ext_ = ext;
@@ -207,13 +211,15 @@ public:
 
 
    __host__ [[nodiscard]] auto* cuda_ptr() {
-      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
+      ASSERT_CUDA(
+          cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
       return cuda_ptr_;
    }
 
 
    __host__ [[nodiscard]] const auto* cuda_ptr() const {
-      ASSERT_CUDA(cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
+      ASSERT_CUDA(
+          cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
       return cuda_ptr_;
    }
 
@@ -251,7 +257,7 @@ private:
          } else if constexpr(this->is_unified()) {
             ASSERT_CUDA(cudaMallocManaged(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));
          } else {
-            static_assert_false<Base>();
+            internal::static_assert_false<Base>();
          }
       }
    }

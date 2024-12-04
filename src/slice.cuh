@@ -150,7 +150,7 @@ __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t 
 template <typename TT, typename... Ints>
 __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
    static_assert(std::is_lvalue_reference_v<TT>);
-   constexpr auto out_dim = sizeof_cast<Ints...>();
+   constexpr auto out_dim = internal::sizeof_cast<Ints...>();
    constexpr auto in_dim = A.dimension() - out_dim;
    static_assert(out_dim < A.dimension());
    static_assert(in_dim > 0);
