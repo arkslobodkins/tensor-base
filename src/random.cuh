@@ -52,11 +52,13 @@ void rand_uniform(Gen& gen, TT& A) {
 
 
 template <typename TT>
-void random(TT& A) {
+void random(TT&& A) {
+   using T = typename std::remove_reference_t<TT>;
+
    auto seed = internal::get_seed();
    curandGenerator_t gen;
 
-   if constexpr(TT::is_host()) {
+   if constexpr(T::is_host()) {
       ASSERT_CURAND(curandCreateGeneratorHost(&gen, CURAND_RNG_PSEUDO_DEFAULT));
    } else {  // Device or unified.
       ASSERT_CURAND(curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT));
