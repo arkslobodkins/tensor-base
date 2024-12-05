@@ -27,9 +27,5 @@ int main() {
    }
    std::cout << A << std::endl;
 
-   UnifiedMatrix<float> B{A.extents()};
-   B.copy_sync(A);
-   std::cout << B << std::endl;
-
    return EXIT_SUCCESS;
 }
