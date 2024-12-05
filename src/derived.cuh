@@ -33,8 +33,7 @@ public:
    }
 
 
-   template <typename... Ints,
-             std::enable_if_t<(... && internal::is_compatible_integer<Ints>()), bool> = true>
+   template <typename... Ints>
    explicit Tensor(Ints... ext) : Tensor{Extents<dim>{ext...}} {
    }
 
@@ -111,6 +110,7 @@ private:
 
 
    void Allocate(const Extents<dim>& ext) {
+      assert(data_ == nullptr);
       if constexpr(alloc == Regular) {
          if(ext.size()) {
             data_ = new T[ext.size()];
@@ -123,7 +123,7 @@ private:
    }
 
 
-   void Free() {
+   void Free() noexcept {
       if constexpr(alloc == Regular) {
          delete[] data_;
       } else {
@@ -225,12 +225,12 @@ public:
 
 
    __host__ [[nodiscard]] auto* pass() {
-      return cuda_ptr();
+      return this->cuda_ptr();
    }
 
 
    __host__ [[nodiscard]] const auto* pass() const {
-      return cuda_ptr();
+      return this->cuda_ptr();
    }
 
 
@@ -251,6 +251,7 @@ private:
    CudaTensorDerived* cuda_ptr_{};
 
    void Allocate(const Extents<Base::dimension()>& ext) {
+      assert(data_ == nullptr);
       if(ext.size()) {
          if constexpr(this->is_device()) {
             ASSERT_CUDA(cudaMalloc(&data_, ext.size() * sizeof(ValueTypeOf<Base>)));

@@ -295,7 +295,7 @@ public:
    template <typename TT>
    __host__ void copy_async(const TT& A, cudaStream_t stream = 0) {
       // Host to host copy is not asynchronous.
-      static_assert(!(this->is_host() && TT::is_host());
+      static_assert(!(this->is_host() && TT::is_host()));
       static_assert(std::is_same_v<value_type, ValueTypeOf<TT>>);
       assert(same_extents(*this, A));
 
