@@ -73,7 +73,7 @@ std::ostream& operator<<(std::ostream& os, const TT& A) {
 
 template <typename TT, std::enable_if_t<TT::is_device(), bool> = true>
 std::ostream& operator<<(std::ostream& os, const TT& A) {
-   Tensor<ValueTypeOf<TT>, A.dimension()> A_host(A.extents());
+   Tensor<ValueTypeOf<TT>, TT::dimension()> A_host(A.extents());
    A_host.copy_sync(A);
    return os << A_host;
 }

@@ -127,23 +127,24 @@ public:
 
 template <typename TT, index_t in_dim>
 __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t offset) {
-   using T = typename std::remove_reference_t<TT>::value_type;
+   using value_type = typename std::remove_reference_t<TT>::value_type;
+   using T = typename std::remove_reference_t<TT>;
    if constexpr(std::is_const_v<std::remove_reference_t<TT>>) {
-      if constexpr(A.is_host()) {
-         return ConstTensorSlice<T, in_dim, A.is_pinned()>{A.data() + offset, ext};
-      } else if constexpr(A.is_device()) {
-         return ConstCudaTensorSlice<T, in_dim>{A.data() + offset, ext};
+      if constexpr(T::is_host()) {
+         return ConstTensorSlice<value_type, in_dim, T::is_pinned()>{A.data() + offset, ext};
+      } else if constexpr(T::is_device()) {
+         return ConstCudaTensorSlice<value_type, in_dim>{A.data() + offset, ext};
       } else {
-         return UnifiedConstTensorSlice<T, in_dim>{A.data() + offset, ext};
+         return UnifiedConstTensorSlice<value_type, in_dim>{A.data() + offset, ext};
       }
 
    } else {
-      if constexpr(A.is_host()) {
-         return TensorSlice<T, in_dim, A.is_pinned()>{A.data() + offset, ext};
-      } else if constexpr(A.is_device()) {
-         return CudaTensorSlice<T, in_dim>{A.data() + offset, ext};
+      if constexpr(T::is_host()) {
+         return TensorSlice<value_type, in_dim, T::is_pinned()>{A.data() + offset, ext};
+      } else if constexpr(T::is_device()) {
+         return CudaTensorSlice<value_type, in_dim>{A.data() + offset, ext};
       } else {
-         return UnifiedTensorSlice<T, in_dim>{A.data() + offset, ext};
+         return UnifiedTensorSlice<value_type, in_dim>{A.data() + offset, ext};
       }
    }
 }
@@ -155,9 +156,11 @@ __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t 
 template <typename TT, typename... Ints>
 __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
    static_assert(std::is_lvalue_reference_v<TT>);
+   using T = typename std::remove_reference_t<TT>;
+
    constexpr auto out_dim = internal::sizeof_cast<Ints...>();
-   constexpr auto in_dim = A.dimension() - out_dim;
-   static_assert(out_dim < A.dimension());
+   constexpr auto in_dim = T::dimension() - out_dim;
+   static_assert(out_dim < T::dimension());
    static_assert(in_dim > 0);
 
    Extents<in_dim> sub_ext;
@@ -173,10 +176,11 @@ __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
 template <typename TT>
 __host__ __device__ auto lblock(TT&& A, index_t first, index_t last) {
    static_assert(std::is_lvalue_reference_v<TT>);
+   using T = typename std::remove_reference_t<TT>;
    assert(last >= first);
    assert(A.valid_index(first, 0) && A.valid_index(last, 0));
 
-   constexpr auto dim = A.dimension();
+   constexpr auto dim = T::dimension();
    Extents<dim> sub_ext = A.extents();
    sub_ext[0] = last - first + 1;
 

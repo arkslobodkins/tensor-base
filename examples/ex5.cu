@@ -26,5 +26,10 @@ int main() {
       A(i, 0) = 777;
    }
    std::cout << A << std::endl;
+
+   UnifiedMatrix<float> B{A.extents()};
+   B.copy_sync(A);
+   std::cout << B << std::endl;
+
    return EXIT_SUCCESS;
 }
