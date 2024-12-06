@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "base.cuh"
+#include "extents.cuh"
 
 
 namespace tnb {

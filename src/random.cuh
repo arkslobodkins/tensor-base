@@ -10,9 +10,10 @@
 #include <cstdlib>
 #include <type_traits>
 
-#include "base.cuh"
+#include "common.cuh"
 
 
+#ifndef NDEBUG
 #define ASSERT_CURAND(curand_call)                                                       \
    do {                                                                                  \
       curandStatus_t error = curand_call;                                                \
@@ -21,6 +22,9 @@
          std::exit(EXIT_FAILURE);                                                        \
       }                                                                                  \
    } while(0)
+#else
+#define ASSERT_CURAND(curand_call) ((void)0)
+#endif
 
 
 namespace tnb {

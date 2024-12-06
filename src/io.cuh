@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include <iomanip>
 #include <iostream>
 #include <type_traits>
 
+#include "derived.cuh"
 #include "slice.cuh"
 
 

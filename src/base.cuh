@@ -34,10 +34,6 @@
 namespace tnb {
 
 
-template <typename T>
-using ValueTypeOf = typename T::value_type;
-
-
 template <typename First, typename Second, typename... TensorTypes>
 __host__ __device__ bool same_extents(const First& first, const Second& second,
                                       const TensorTypes&... tensors) {

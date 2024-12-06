@@ -9,6 +9,7 @@
 #include <type_traits>
 
 
+#ifndef NDEBUG
 #define ASSERT_CUDA(cuda_call)                           \
    do {                                                  \
       cudaError_t error = cuda_call;                     \
@@ -21,12 +22,19 @@
          std::exit(EXIT_FAILURE);                        \
       }                                                  \
    } while(0)
+#else
+#define ASSERT_CUDA(cuda_call) ((void)0)
+#endif
 
 
 namespace tnb {
 
 
 using index_t = long int;
+
+
+template <typename T>
+using ValueTypeOf = typename T::value_type;
 
 
 namespace internal {
