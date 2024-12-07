@@ -130,6 +130,7 @@ template <typename TT, index_t in_dim>
 __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t offset) {
    using value_type = typename std::remove_reference_t<TT>::value_type;
    using T = typename std::remove_reference_t<TT>;
+
    if constexpr(std::is_const_v<std::remove_reference_t<TT>>) {
       if constexpr(T::is_host()) {
          return ConstTensorSlice<value_type, in_dim, T::is_pinned()>{A.data() + offset, ext};
@@ -156,8 +157,10 @@ __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t 
 
 template <typename TT, typename... Ints>
 __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
-   static_assert(std::is_lvalue_reference_v<TT>);
-   using T = typename std::remove_reference_t<TT>;
+   using T = typename std::decay_t<TT>;
+   if constexpr(internal::has_swap<T>::value) {
+      static_assert(std::is_lvalue_reference_v<TT>);
+   }
 
    constexpr auto out_dim = internal::sizeof_cast<Ints...>();
    constexpr auto in_dim = T::dimension() - out_dim;
@@ -176,8 +179,10 @@ __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
 
 template <typename TT>
 __host__ __device__ auto lblock(TT&& A, index_t first, index_t last) {
-   static_assert(std::is_lvalue_reference_v<TT>);
-   using T = typename std::remove_reference_t<TT>;
+   using T = typename std::decay_t<TT>;
+   if constexpr(internal::has_swap<T>::value) {
+      static_assert(std::is_lvalue_reference_v<TT>);
+   }
    assert(last >= first);
    assert(A.valid_index(first, 0) && A.valid_index(last, 0));
 

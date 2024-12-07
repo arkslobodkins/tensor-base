@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <type_traits>
+#include <utility>
 
 
 #ifndef NDEBUG
@@ -64,6 +65,14 @@ template <typename T>
 __host__ __device__ constexpr void static_assert_false() {
    static_assert(!sizeof(T));
 }
+
+
+template <typename T, typename = void>
+struct has_swap : std::false_type {};
+
+
+template <typename T>
+struct has_swap<T, std::void_t<decltype(std::declval<T>().swap(std::declval<T>()))>> : std::true_type {};
 
 
 }  // namespace internal

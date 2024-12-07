@@ -7,6 +7,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <utility>
 #include <cstdlib>
 #include <type_traits>
 
@@ -33,7 +34,7 @@ namespace tnb {
 namespace internal {
 
 
-inline auto get_seed() {
+__host__ inline auto get_seed() {
    using namespace std::chrono;
    auto duration = system_clock::now().time_since_epoch();
    return duration_cast<nanoseconds>(duration).count();
@@ -41,7 +42,7 @@ inline auto get_seed() {
 
 
 template <typename Gen, typename TT>
-void rand_uniform(Gen& gen, TT& A) {
+__host__ void rand_uniform(Gen& gen, TT& A) {
    using T = ValueTypeOf<TT>;
    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
    if constexpr(std::is_same_v<T, float>) {
@@ -52,11 +53,8 @@ void rand_uniform(Gen& gen, TT& A) {
 }
 
 
-}  // namespace internal
-
-
 template <typename TT>
-void random(TT&& A) {
+__host__ void random_impl(TT&& A) {
    using T = typename std::remove_reference_t<TT>;
 
    auto seed = internal::get_seed();
@@ -70,6 +68,16 @@ void random(TT&& A) {
    ASSERT_CURAND(curandSetPseudoRandomGeneratorSeed(gen, seed));
    internal::rand_uniform(gen, A);
    ASSERT_CURAND(curandDestroyGenerator(gen));
+}
+
+
+}  // namespace internal
+
+
+template <typename... TTArgs>
+__host__ void random(TTArgs&&... AArgs) {
+   static_assert(sizeof...(TTArgs) > 0);
+   (..., internal::random_impl(std::forward<TTArgs>(AArgs)));
 }
 
 
