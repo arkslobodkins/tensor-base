@@ -35,8 +35,8 @@ template <typename TT1, typename TT2,
 __host__ bool operator==(const TT1& A1, const TT2& A2) {
    Tensor<ValueTypeOf<TT1>, TT1::dimension()> A1_host(A1.extents());
    Tensor<ValueTypeOf<TT2>, TT2::dimension()> A2_host(A2.extents());
-   A1_host.copy_sync(A1);
-   A2_host.copy_sync(A2);
+   A1_host.copy(A1);
+   A2_host.copy(A2);
    return A1_host == A2_host;
 }
 

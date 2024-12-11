@@ -86,7 +86,7 @@ void lslice_tensor(index_t n) {
 
    TT A(n, 3, 4);
    for(index_t i = 0; i < n; ++i) {
-      lslice(A, i).copy_sync(M[i]);
+      lslice(A, i).copy(M[i]);
       assert(lslice(A, i) == M[i]);
       for(index_t j = 0; j < 3; ++j) {
          auto Ai = lslice(A, i);

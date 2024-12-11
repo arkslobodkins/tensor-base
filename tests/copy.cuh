@@ -13,7 +13,7 @@ void memset_tensor_sync(const Extents<2>& ext) {
    Tensor<ValueTypeOf<TT>, 2> ATest(ext);
 
    A.memset(-1);
-   ATest.copy_sync(A);
+   ATest.copy(A);
    assert(std::all_of(ATest.begin(), ATest.end(), [](auto x) {
       return x == -1;
    }));
@@ -26,8 +26,8 @@ void copy_tensor_sync(const Extents<2>& ext) {
    TT2 B(ext);
    random(A);
 
-   B.copy_sync(A);
-   A_back.copy_sync(B);
+   B.copy(A);
+   A_back.copy(B);
    assert(A == A_back);
 }
 

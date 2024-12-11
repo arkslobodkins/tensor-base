@@ -41,13 +41,13 @@ int main() {
    std::iota(A.begin(), A.end(), 0);
    std::iota(B.begin(), B.end(), 0);
 
-   A_gpu.copy_sync(A);
-   B_gpu.copy_sync(B);
+   A_gpu.copy(A);
+   B_gpu.copy(B);
 
    compute<<<2, 2>>>(A_gpu.pass(), B_gpu.pass(), C_gpu.pass());
    scale<<<2, 2>>>(lblock(C_gpu, 0, 2).pass());
 
-   A.copy_sync(C_gpu);
+   A.copy(C_gpu);
    std::cout << A << std::endl;
 
    return EXIT_SUCCESS;

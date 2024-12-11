@@ -281,7 +281,7 @@ public:
 
 
    template <typename TT>
-   __host__ void copy_sync(const TT& A) {
+   __host__ void copy(const TT& A) {
       static_assert(std::is_same_v<value_type, ValueTypeOf<TT>>);
       assert(same_extents(*this, A));
       ASSERT_CUDA(cudaMemcpy(this->data(), A.data(), this->bytes(), cudaMemcpyDefault));
