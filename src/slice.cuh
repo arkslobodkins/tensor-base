@@ -28,12 +28,7 @@ public:
       ext_ = ext;
    }
 
-   __host__ __device__ TensorSliceBase(const TensorSliceBase& A) {
-      TENSOR_VALIDATE_HOST_DEBUG;
-      data_ = A.data_;
-      ext_ = A.ext_;
-   }
-
+   TensorSliceBase(const TensorSliceBase& A) = default;
    __host__ __device__ TensorSliceBase& operator=(const TensorSliceBase&) = delete;
 
 private:
@@ -52,11 +47,7 @@ public:
       ext_ = ext;
    }
 
-   __host__ __device__ UnifiedTensorSliceBase(const UnifiedTensorSliceBase& A) {
-      data_ = A.data_;
-      ext_ = A.ext_;
-   }
-
+   UnifiedTensorSliceBase(const UnifiedTensorSliceBase& A) = default;
    __host__ __device__ UnifiedTensorSliceBase& operator=(const UnifiedTensorSliceBase&)
        = delete;
 
