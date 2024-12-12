@@ -3,7 +3,7 @@
 #include <iostream>
 #include <numeric>
 
-#include "../src/tnb.cuh"
+#include <tnb.cuh>
 
 using namespace tnb;
 

@@ -14,19 +14,19 @@ endif
 IFLAGS =-I../src/
 
 ex1: ex1.cu
-	nvcc ex1.cu -o ex1.x $(CUDAFLAGS) $(CXXFLAGS) $(IFLAGS) -lcurand
+	nvcc ex1.cu -o ex1.x $(CXXFLAGS) $(IFLAGS) -lcurand
 
 ex2: ex2.cu
-	nvcc ex2.cu -o ex2.x $(CUDAFLAGS) $(CXXFLAGS) $(IFLAGS)
+	nvcc ex2.cu -o ex2.x $(CXXFLAGS) $(IFLAGS)
 
 ex3: ex3.cu
-	nvcc ex3.cu -o ex3.x $(CUDAFLAGS) $(CXXFLAGS) $(IFLAGS)
+	nvcc ex3.cu -o ex3.x $(CXXFLAGS) $(IFLAGS)
 
 ex4: ex4.cu
-	nvcc ex4.cu -o ex4.x $(CUDAFLAGS) $(CXXFLAGS) $(IFLAGS) -lcurand
+	nvcc ex4.cu -o ex4.x $(CXXFLAGS) $(IFLAGS) -lcurand
 
 ex5: ex5.cu
-	nvcc ex5.cu -o ex5.x $(CUDAFLAGS) $(CXXFLAGS) $(IFLAGS) -lcurand
+	nvcc ex5.cu -o ex5.x $(CXXFLAGS) $(IFLAGS) -lcurand
 
 clean:
 	rm -rf *.x

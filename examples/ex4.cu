@@ -1,6 +1,6 @@
 #include <cstdlib>
 
-#include "../src/tnb.cuh"
+#include <tnb.cuh>
 
 using namespace tnb;
 

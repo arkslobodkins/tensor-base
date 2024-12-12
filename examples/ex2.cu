@@ -1,7 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "../src/tnb.cuh"
+#include <tnb.cuh>
 
 using namespace tnb;
 
