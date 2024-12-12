@@ -1,11 +1,13 @@
 // Arkadijs Slobodkins
 // 2024
 
+
 #pragma once
 
 
-#include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <sstream>
 #include <type_traits>
 #include <utility>
 
@@ -72,7 +74,8 @@ struct has_swap : std::false_type {};
 
 
 template <typename T>
-struct has_swap<T, std::void_t<decltype(std::declval<T>().swap(std::declval<T>()))>> : std::true_type {};
+struct has_swap<T, std::void_t<decltype(std::declval<T>().swap(std::declval<T>()))>>
+    : std::true_type {};
 
 
 }  // namespace internal

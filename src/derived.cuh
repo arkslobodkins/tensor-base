@@ -1,9 +1,9 @@
 // Arkadijs Slobodkins
 // 2024
 
+
 #pragma once
 
-#include <curand.h>
 
 #include <algorithm>
 #include <cassert>

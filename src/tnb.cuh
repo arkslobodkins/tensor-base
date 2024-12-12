@@ -1,7 +1,9 @@
 // Arkadijs Slobodkins
 // 2024
 
+
 #pragma once
+
 
 #include "compare.cuh"
 #include "derived.cuh"

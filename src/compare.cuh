@@ -1,6 +1,7 @@
 // Arkadijs Slobodkins
 // 2024
 
+
 #pragma once
 
 #include <type_traits>

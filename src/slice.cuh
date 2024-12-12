@@ -1,7 +1,9 @@
 // Arkadijs Slobodkins
 // 2024
 
+
 #pragma once
+
 
 #include <cassert>
 #include <type_traits>
@@ -9,6 +11,7 @@
 
 #include "base.cuh"
 #include "extents.cuh"
+
 
 namespace tnb {
 

@@ -5,10 +5,13 @@
 
 #define TIME_EXPR(a)                                               \
    do {                                                            \
-      timer t;                                                     \
+      tnb::timer t;                                                \
       a;                                                           \
       std::printf("%s took: %.4e seconds\n", (#a), t.wall_time()); \
    } while(0)
+
+
+namespace tnb {
 
 
 struct timer {
@@ -30,4 +33,7 @@ struct timer {
 private:
    std::chrono::system_clock::time_point start;
 };
+
+
+}  // namespace tnb
 
