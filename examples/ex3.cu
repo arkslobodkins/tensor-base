@@ -2,22 +2,21 @@
 #include <cstdlib>
 #include <iostream>
 #include <numeric>
-
 #include <tnb.cuh>
 
 using namespace tnb;
 
 
-template <typename T>
-__global__ void compute(const CudaTensor<T, 4>* A, const CudaTensor<T, 4>* B, CudaTensor<T, 4>* C) {
-   assert(same_extents(*A, *B, *C));
+template <typename TensorType>
+__global__ void compute(const TensorType A, const TensorType B, TensorType C) {
+   assert(same_extents(A, B, C));
 
    index_t i = blockDim.x * blockIdx.x + threadIdx.x;
-   for(; i < A->extent(0); i += gridDim.x * blockDim.x)
-      for(index_t j = 0; j < A->extent(1); ++j)
-         for(index_t k = 0; k < A->extent(2); ++k)
-            for(index_t l = 0; l < A->extent(3); ++l)
-               (*C)(i, j, k, l) = 2 * (*A)(i, j, k, l) + 2 * (*B)(i, j, k, l);
+   for(; i < A.extent(0); i += gridDim.x * blockDim.x)
+      for(index_t j = 0; j < A.extent(1); ++j)
+         for(index_t k = 0; k < A.extent(2); ++k)
+            for(index_t l = 0; l < A.extent(3); ++l)
+               C(i, j, k, l) = 2 * A(i, j, k, l) + 2 * B(i, j, k, l);
 }
 
 

@@ -12,6 +12,7 @@
 
 #include "base.cuh"
 #include "extents.cuh"
+#include "slice.cuh"
 
 
 namespace tnb {
@@ -140,7 +141,6 @@ template <typename Base>
 class CudaTensorDerived : public Base {
 public:
    __host__ CudaTensorDerived() : Base{} {
-      ASSERT_CUDA(cudaMalloc(&cuda_ptr_, sizeof(CudaTensorDerived)));
    }
 
 
@@ -191,7 +191,6 @@ public:
 
    __host__ ~CudaTensorDerived() {
       ASSERT_CUDA(cudaFree(data_));
-      ASSERT_CUDA(cudaFree(cuda_ptr_));
    }
 
 
@@ -211,27 +210,13 @@ public:
    }
 
 
-   __host__ [[nodiscard]] auto* cuda_ptr() {
-      ASSERT_CUDA(
-          cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
-      return cuda_ptr_;
+   __host__ [[nodiscard]] auto pass() {
+      return lblock(*this, 0, ext_[0] - 1L);
    }
 
 
-   __host__ [[nodiscard]] const auto* cuda_ptr() const {
-      ASSERT_CUDA(
-          cudaMemcpy(cuda_ptr_, this, sizeof(CudaTensorDerived), cudaMemcpyHostToDevice));
-      return cuda_ptr_;
-   }
-
-
-   __host__ [[nodiscard]] auto* pass() {
-      return this->cuda_ptr();
-   }
-
-
-   __host__ [[nodiscard]] const auto* pass() const {
-      return this->cuda_ptr();
+   __host__ [[nodiscard]] const auto pass() const {
+      return lblock(*this, 0, ext_[0] - 1L);
    }
 
 
@@ -249,7 +234,6 @@ public:
 private:
    using Base::data_;
    using Base::ext_;
-   CudaTensorDerived* cuda_ptr_{};
 
    void Allocate(const Extents<Base::dimension()>& ext) {
       assert(data_ == nullptr);

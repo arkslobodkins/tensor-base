@@ -1,5 +1,4 @@
 #include <cstdlib>
-
 #include <tnb.cuh>
 
 using namespace tnb;
