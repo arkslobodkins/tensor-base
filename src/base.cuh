@@ -73,8 +73,6 @@ template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
           bool is_pinned_mem = false>
 class LinearBaseCommon {
 private:
-   using Self = LinearBaseCommon<T, dim, scheme, is_const_ptr, is_pinned_mem>;
-
    using cnd_ptr_t = std::conditional_t<is_const_ptr, const T*, T*>;
    using cnd_ref_t = std::conditional_t<is_const_ptr, const T&, T&>;
 
@@ -307,7 +305,7 @@ public:
 
 
    static constexpr __host__ __device__ bool is_pinned() {
-      static_assert(Self::is_host());
+      static_assert(this->is_host());
       return is_pinned_mem;
    }
 };
