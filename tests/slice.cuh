@@ -1,10 +1,12 @@
 #pragma once
 
+
 #include <memory>
 #include <numeric>
 #include <type_traits>
 
 #include "../src/tnb.cuh"
+
 
 using namespace tnb;
 
@@ -68,11 +70,15 @@ void attach_tensor() {
       assert(A[i] == x.get()[i]);
    }
 
-   for(index_t i = 0; i < 5; ++i)
-      for(index_t j = 0; j < 10; ++j)
-         for(index_t k = 0; k < 15; ++k)
-            for(index_t l = 0; l < 20; ++l)
+   for(index_t i = 0; i < 5; ++i) {
+      for(index_t j = 0; j < 10; ++j) {
+         for(index_t k = 0; k < 15; ++k) {
+            for(index_t l = 0; l < 20; ++l) {
                assert(A(i, j, k, l) == x.get()[A.index_of(i, j, k, l)]);
+            }
+         }
+      }
+   }
 }
 
 

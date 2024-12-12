@@ -1,8 +1,10 @@
 #pragma once
 
+
 #include <algorithm>
 
 #include "../src/tnb.cuh"
+
 
 using namespace tnb;
 
@@ -14,9 +16,7 @@ void memset_tensor_sync(const Extents<2>& ext) {
 
    A.memset(-1);
    ATest.copy(A);
-   assert(std::all_of(ATest.begin(), ATest.end(), [](auto x) {
-      return x == -1;
-   }));
+   assert(std::all_of(ATest.begin(), ATest.end(), [](auto x) { return x == -1; }));
 }
 
 
