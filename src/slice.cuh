@@ -124,7 +124,11 @@ public:
 template <typename TT, index_t in_dim>
 __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t offset) {
    using value_type = typename std::remove_reference_t<TT>::value_type;
-   using T = typename std::remove_reference_t<TT>;
+   using T = typename std::decay_t<TT>;
+
+   if constexpr(internal::has_swap<T>::value) {
+      static_assert(std::is_lvalue_reference_v<TT>);
+   }
 
    if constexpr(std::is_const_v<std::remove_reference_t<TT>>) {
       if constexpr(T::is_host()) {
@@ -153,9 +157,6 @@ __host__ __device__ auto slice_data(TT&& A, const Extents<in_dim>& ext, index_t 
 template <typename TT, typename... Ints>
 __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
    using T = typename std::decay_t<TT>;
-   if constexpr(internal::has_swap<T>::value) {
-      static_assert(std::is_lvalue_reference_v<TT>);
-   }
 
    constexpr auto out_dim = internal::sizeof_cast<Ints...>();
    constexpr auto in_dim = T::dimension() - out_dim;
@@ -175,9 +176,6 @@ __host__ __device__ auto lslice(TT&& A, Ints... indexes) {
 template <typename TT>
 __host__ __device__ auto lblock(TT&& A, index_t first, index_t last) {
    using T = typename std::decay_t<TT>;
-   if constexpr(internal::has_swap<T>::value) {
-      static_assert(std::is_lvalue_reference_v<TT>);
-   }
    assert(last >= first);
    assert(A.valid_index(first, 0) && A.valid_index(last, 0));
 
@@ -191,15 +189,24 @@ __host__ __device__ auto lblock(TT&& A, index_t first, index_t last) {
 
 
 template <typename TT>
+__host__ __device__ auto lblock(TT&& A, index_t first) {
+   return lblock(std::forward<TT>(A), first, first);
+}
+
+
+template <typename TT>
 __host__ __device__ auto row(TT&& A, index_t i) {
    static_assert(std::decay_t<TT>::dimension() == 2L);
    return lslice(std::forward<TT>(A), i);
 }
 
 
-template <typename TT>
-__host__ __device__ auto lblock(TT&& A, index_t first) {
-   return lblock(std::forward<TT>(A), first, first);
+template <index_t dim, typename TT, typename... Ints>
+__host__ __device__ auto view_as(TT&& A, Ints... indexes) {
+   static_assert(internal::sizeof_cast<Ints...>() == dim);
+   Extents<dim> sub_ext{indexes...};
+   assert(sub_ext.product_from(0) == A.size());
+   return internal::slice_data(std::forward<TT>(A), sub_ext, 0);
 }
 
 
