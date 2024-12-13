@@ -301,6 +301,8 @@ public:
       static_assert(std::is_same_v<value_type, ValueTypeOf<TT>>);
       assert(same_extents(*this, A));
 
+      // Both tensors must have pinned memory because copy_async is currently not allowed for
+      // host-to-host.
       if constexpr(this->is_host()) {
          static_assert(this->is_pinned());
       }
