@@ -16,34 +16,33 @@
 namespace tnb {
 
 
-template <typename First, typename Second, typename... TensorTypes>
-__host__ __device__ bool same_extents(const First& first, const Second& second,
-                                      const TensorTypes&... tensors) {
-   if(first.dimension() != second.dimension()) {
+template <typename TT1, typename TT2, typename... TTArgs>
+__host__ __device__ bool same_extents(const TT1& A1, const TT2& A2, const TTArgs&... AArgs) {
+   if(A1.dimension() != A2.dimension()) {
       return false;
    }
-   for(index_t d = 0; d < first.dimension(); ++d) {
-      if(first.extent(d) != second.extent(d)) {
+   for(index_t d = 0; d < A1.dimension(); ++d) {
+      if(A1.extent(d) != A2.extent(d)) {
          return false;
       }
    }
    if constexpr(sizeof...(TensorTypes) == 0) {
       return true;
    } else {
-      return same_extents(second, tensors...);
+      return same_extents(A2, AArgs...);
    }
 }
 
 
-template <typename T, typename... Ts>
+template <typename TT, typename... TTArgs>
 __host__ __device__ constexpr bool same_value_type() {
-   return (std::is_same_v<ValueTypeOf<T>, ValueTypeOf<Ts>> && ...);
+   return (std::is_same_v<ValueTypeOf<TT>, ValueTypeOf<TTArgs>> && ...);
 }
 
 
-template <typename T, typename... Ts>
+template <typename TT, typename... TTArgs>
 __host__ __device__ constexpr bool same_memory_kind() {
-   return ((T::memory_kind() == Ts::memory_kind()) && ...);
+   return ((TT::memory_kind() == TTArgs::memory_kind()) && ...);
 }
 
 
@@ -305,8 +304,6 @@ public:
       if constexpr(this->is_host()) {
          static_assert(this->is_pinned());
       }
-      // Use <if> instead of <else if> in case both tensors are allowed to be host types in the
-      // future. For now, copy_async is not allowed from host to host.
       if constexpr(TT::is_host()) {
          static_assert(TT::is_pinned());
       }

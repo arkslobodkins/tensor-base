@@ -68,12 +68,12 @@ __host__ __device__ constexpr void static_assert_false() {
 }
 
 
-template <typename T, typename = void>
+template <typename TT, typename = void>
 struct has_swap : std::false_type {};
 
 
-template <typename T>
-struct has_swap<T, std::void_t<decltype(std::declval<T>().swap(std::declval<T>()))>>
+template <typename TT>
+struct has_swap<TT, std::void_t<decltype(std::declval<TT>().swap(std::declval<TT>()))>>
     : std::true_type {};
 
 
