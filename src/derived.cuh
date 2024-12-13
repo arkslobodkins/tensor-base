@@ -23,7 +23,7 @@ enum Allocator { Regular, Pinned };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim, Allocator alloc = Regular>
-class Tensor : public LinearBase<T, dim, Host, false, (alloc == Pinned)> {
+class Tensor : public TensorBaseValidated<T, dim, Host, false, (alloc == Pinned)> {
 public:
    Tensor() = default;
 
@@ -106,7 +106,7 @@ public:
 
 
 private:
-   using Base = LinearBase<T, dim, Host, false, (alloc == Pinned)>;
+   using Base = TensorBaseValidated<T, dim, Host, false, (alloc == Pinned)>;
    using Base::data_;
    using Base::ext_;
 
@@ -252,11 +252,11 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim>
-using CudaTensor = CudaTensorDerived<LinearBase<T, dim, Device>>;
+using CudaTensor = CudaTensorDerived<TensorBaseValidated<T, dim, Device>>;
 
 
 template <typename T, index_t dim>
-using UnifiedTensor = CudaTensorDerived<LinearBaseCommon<T, dim, Unified>>;
+using UnifiedTensor = CudaTensorDerived<TensorBase<T, dim, Unified>>;
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

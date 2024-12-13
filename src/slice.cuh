@@ -21,11 +21,11 @@ namespace internal {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_mem>
-class TensorSliceBase : public LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem> {
+class TensorSliceBase : public TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem> {
 public:
    __host__ __device__ explicit TensorSliceBase(
        std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem>::validate_host_debug();
       assert(valid_extents(ext));
       data_ = data;
       ext_ = ext;
@@ -35,13 +35,13 @@ public:
    __host__ __device__ TensorSliceBase& operator=(const TensorSliceBase&) = delete;
 
 private:
-   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem>::ext_;
-   using LinearBase<T, dim, scheme, is_const_ptr, is_pinned_mem>::data_;
+   using TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem>::ext_;
+   using TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem>::data_;
 };
 
 
 template <typename T, index_t dim, bool is_const_ptr>
-class UnifiedTensorSliceBase : public LinearBaseCommon<T, dim, Unified, is_const_ptr> {
+class UnifiedTensorSliceBase : public TensorBase<T, dim, Unified, is_const_ptr> {
 public:
    __host__ __device__ explicit UnifiedTensorSliceBase(
        std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
@@ -55,8 +55,8 @@ public:
        = delete;
 
 private:
-   using LinearBaseCommon<T, dim, Unified, is_const_ptr>::ext_;
-   using LinearBaseCommon<T, dim, Unified, is_const_ptr>::data_;
+   using TensorBase<T, dim, Unified, is_const_ptr>::ext_;
+   using TensorBase<T, dim, Unified, is_const_ptr>::data_;
 };
 
 

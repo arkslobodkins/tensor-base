@@ -13,25 +13,6 @@
 #include "extents.cuh"
 
 
-#define TENSOR_STATIC_ASSERT_DIMENSION()                       \
-   static_assert(static_cast<index_t>(sizeof...(Ints)) == dim, \
-                 "index dimension must be equal to the dimension of the tensor")
-
-
-#ifndef NDEBUG
-#define TENSOR_VALIDATE_HOST_DEBUG this->validate_host_type()
-#else
-#define TENSOR_VALIDATE_HOST_DEBUG
-#endif
-
-
-#ifndef NDEBUG
-#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG this->validate_host_device_type()
-#else
-#define TENSOR_VALIDATE_HOST_DEVICE_DEBUG
-#endif
-
-
 namespace tnb {
 
 
@@ -71,9 +52,9 @@ enum Scheme { Host, Device, Unified };
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
           bool is_pinned_mem = false>
-class LinearBaseCommon {
+class TensorBase {
 private:
-   using Self = LinearBaseCommon<T, dim, scheme, is_const_ptr, is_pinned_mem>;
+   using Self = TensorBase<T, dim, scheme, is_const_ptr, is_pinned_mem>;
 
    using cnd_ptr_t = std::conditional_t<is_const_ptr, const T*, T*>;
    using cnd_ref_t = std::conditional_t<is_const_ptr, const T&, T&>;
@@ -85,7 +66,8 @@ protected:
    Extents<dim> ext_{};
    cnd_ptr_t data_{};
 
-   __host__ __device__ static void validate_host_type() {
+
+   __host__ __device__ static inline void validate_host_type() {
 #ifdef __CUDA_ARCH__
       if constexpr(scheme == Host) {
          __device__ void not_callable_on_device_error();
@@ -94,7 +76,8 @@ protected:
 #endif
    }
 
-   __host__ __device__ static void validate_device_type() {
+
+   __host__ __device__ static inline void validate_device_type() {
 #ifndef __CUDA_ARCH__
       if constexpr(scheme != Host) {
          __host__ void not_callable_on_host_error();
@@ -103,10 +86,33 @@ protected:
 #endif
    }
 
-   __host__ __device__ static void validate_host_device_type() {
+
+   __host__ __device__ static inline void validate_host_device_type() {
       validate_host_type();
       validate_device_type();
    }
+
+
+   __host__ __device__ static inline void validate_host_debug() {
+#ifndef NDEBUG
+      Self::validate_host_type();
+#endif
+   }
+
+
+   __host__ __device__ static inline void validate_host_device_debug() {
+#ifndef NDEBUG
+      Self::validate_host_device_type();
+#endif
+   }
+
+
+   template <typename... Ints>
+   __host__ __device__ static constexpr void tensor_static_assert_dimension() {
+      static_assert(static_cast<index_t>(sizeof...(Ints)) == Self::dimension(),
+                    "index dimension must be equal to the dimension of the tensor");
+   }
+
 
 public:
    static_assert(is_pinned_mem == true ? (scheme == Host) : true);
@@ -237,14 +243,14 @@ public:
 
    template <typename... Ints>
    __host__ __device__ cnd_ref_t operator()(Ints... indexes) {
-      TENSOR_STATIC_ASSERT_DIMENSION();
+      tensor_static_assert_dimension<Ints...>();
       return data_[this->index_of(indexes...)];
    }
 
 
    template <typename... Ints>
    __host__ __device__ const_ref_t operator()(Ints... indexes) const {
-      TENSOR_STATIC_ASSERT_DIMENSION();
+      tensor_static_assert_dimension<Ints...>();
       return data_[this->index_of(indexes...)];
    }
 
@@ -315,9 +321,9 @@ public:
 
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
           bool is_pinned_mem = false>
-class LinearBase : public LinearBaseCommon<T, dim, scheme, is_const_ptr, is_pinned_mem> {
+class TensorBaseValidated : public TensorBase<T, dim, scheme, is_const_ptr, is_pinned_mem> {
 private:
-   using Base = LinearBaseCommon<T, dim, scheme, is_const_ptr, is_pinned_mem>;
+   using Base = TensorBase<T, dim, scheme, is_const_ptr, is_pinned_mem>;
 
 protected:
    using Base::data_;
@@ -333,129 +339,129 @@ public:
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ decltype(auto) data() {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::data();
    }
 
 
    __host__ __device__ decltype(auto) data() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::data();
    }
 
 
    __host__ __device__ bool empty() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::empty();
    }
 
 
    __host__ __device__ decltype(auto) begin() {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::begin();
    }
 
 
    __host__ __device__ decltype(auto) begin() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::begin();
    }
 
 
    __host__ __device__ decltype(auto) cbegin() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::cbegin();
    }
 
 
    __host__ __device__ decltype(auto) end() {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::end();
    }
 
 
    __host__ __device__ decltype(auto) end() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::end();
    }
 
 
    __host__ __device__ decltype(auto) cend() const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::cend();
    }
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ index_t size() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::size();
    }
 
 
    __host__ __device__ index_t bytes() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::bytes();
    }
 
 
    __host__ __device__ index_t extent(index_t d) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::extent(d);
    }
 
 
    __host__ __device__ Extents<dim> extents() const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::extents();
    }
 
 
    ////////////////////////////////////////////////////////////////////////////////////////////////
    __host__ __device__ bool valid_index(index_t i, index_t d) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::valid_index(i, d);
    }
 
 
    template <index_t in_dim, typename First, typename... Ints>
    __host__ __device__ index_t offset_of(First first, Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::template offset_of<in_dim>(first, indexes...);
    }
 
 
    template <typename First, typename... Ints>
    __host__ __device__ index_t index_of(First first, Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEBUG;
+      this->validate_host_debug();
       return Base::index_of(first, indexes...);
    }
 
 
    template <typename... Ints>
    __host__ __device__ decltype(auto) operator()(Ints... indexes) {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::operator()(indexes...);
    }
 
 
    template <typename... Ints>
    __host__ __device__ decltype(auto) operator()(Ints... indexes) const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::operator()(indexes...);
    }
 
 
    template <typename Int>
    __host__ __device__ decltype(auto) operator[](Int i) {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::operator[](i);
    }
 
 
    template <typename Int>
    __host__ __device__ decltype(auto) operator[](Int i) const {
-      TENSOR_VALIDATE_HOST_DEVICE_DEBUG;
+      this->validate_host_device_debug();
       return Base::operator[](i);
    }
 };
