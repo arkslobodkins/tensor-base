@@ -10,8 +10,7 @@ template <typename TensorType>
 __global__ void row_iota(TensorType A) {
    auto rid = blockDim.x * blockIdx.x + threadIdx.x;
    for(; rid < A.extent(0); rid += gridDim.x * blockDim.x) {
-      auto row = lslice(A, rid);
-      for(auto& x : row) {
+      for(auto& x : row(A, rid)) {
          x = rid;
       }
    }

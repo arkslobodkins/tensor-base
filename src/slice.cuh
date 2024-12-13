@@ -21,7 +21,8 @@ namespace internal {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr, bool is_pinned_mem>
-class TensorSliceBase : public TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem> {
+class TensorSliceBase
+    : public TensorBaseValidated<T, dim, scheme, is_const_ptr, is_pinned_mem> {
 public:
    __host__ __device__ explicit TensorSliceBase(
        std::conditional_t<is_const_ptr, const T*, T*> data, const Extents<dim>& ext) {
@@ -186,6 +187,13 @@ __host__ __device__ auto lblock(TT&& A, index_t first, index_t last) {
 
    auto offset = A.template offset_of<dim>(first);
    return internal::slice_data(std::forward<TT>(A), sub_ext, offset);
+}
+
+
+template <typename TT>
+__host__ __device__ auto row(TT&& A, index_t i) {
+   static_assert(std::decay_t<TT>::dimension() == 2L);
+   return lslice(std::forward<TT>(A), i);
 }
 
 
