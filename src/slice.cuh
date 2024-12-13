@@ -202,11 +202,18 @@ __host__ __device__ auto row(TT&& A, index_t i) {
 
 
 template <index_t dim, typename TT, typename... Ints>
-__host__ __device__ auto view_as(TT&& A, Ints... indexes) {
+__host__ __device__ auto view_as(TT&& A, const Extents<dim> ext) {
+   assert(ext.product_from(0) == A.size());
+   return internal::slice_data(std::forward<TT>(A), ext, 0);
+}
+
+
+// <dim> template parameter is not strictly needed, but used here
+// for consistency and additional safety.
+template <index_t dim, typename TT, typename... Ints>
+__host__ __device__ auto view_as(TT&& A, Ints... ext) {
    static_assert(internal::sizeof_cast<Ints...>() == dim);
-   Extents<dim> sub_ext{indexes...};
-   assert(sub_ext.product_from(0) == A.size());
-   return internal::slice_data(std::forward<TT>(A), sub_ext, 0);
+   return view_as(std::forward<TT>(A), Extents<dim>{ext...});
 }
 
 

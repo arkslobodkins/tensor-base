@@ -25,6 +25,7 @@ int main() {
       A(i, 0) = 777;
    }
    std::cout << A << std::endl;
+   std::cout << view_as<2>(A, A.extents()) << std::endl;
 
    return EXIT_SUCCESS;
 }

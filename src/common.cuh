@@ -32,6 +32,7 @@
 namespace tnb {
 
 
+// Index type used throughout the library.
 using index_t = long int;
 
 

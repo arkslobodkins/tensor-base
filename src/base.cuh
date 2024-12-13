@@ -274,7 +274,7 @@ public:
       if constexpr(this->is_host()) {
          std::memset(this->data(), val, this->size() * sizeof(T));
       } else {
-         // Set on device for device or unified memory type.
+         // For device or unified memory type.
          ASSERT_CUDA(cudaMemset(this->data(), val, this->size() * sizeof(T)));
       }
    }
@@ -301,8 +301,8 @@ public:
       static_assert(std::is_same_v<value_type, ValueTypeOf<TT>>);
       assert(same_extents(*this, A));
 
-      // Both tensors must have pinned memory because copy_async is currently not allowed for
-      // host-to-host.
+      // Any host tensor must have pinned memory because copy_async is currently not allowed
+      // for host-to-host.
       if constexpr(this->is_host()) {
          static_assert(this->is_pinned());
       }
