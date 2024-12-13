@@ -304,7 +304,10 @@ public:
 
       if constexpr(this->is_host()) {
          static_assert(this->is_pinned());
-      } else if constexpr(TT::is_host()) {
+      }
+      // Use <if> instead of <else if> in case both tensors are allowed to be host types in the
+      // future. For now, copy_async is not allowed from host to host.
+      if constexpr(TT::is_host()) {
          static_assert(TT::is_pinned());
       }
       ASSERT_CUDA(
