@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <tnb.cuh>
 
@@ -14,15 +15,13 @@ __global__ void add_scalar(TensorType A, typename TensorType::value_type scalar)
 }
 
 
-template <typename T, index_t M>
-__host__ bool verify(const T& x, const typename T::value_type (&scalars)[M]) {
+template <typename TensorType, index_t M>
+__host__ bool verify(const TensorType& x,
+                     const typename TensorType::value_type (&scalars)[M]) {
    for(index_t i = 0; i < x.extent(0); ++i) {
+      auto within_range = [s = scalars[i]](auto z) { return (z >= s) && (z <= s + 1); };
       auto xi = lslice(x, i);
-      for(index_t k = 0; k < xi.size(); ++k) {
-         if(xi[k] > scalars[i] + 1 || xi[k] < scalars[i]) {
-            return false;
-         }
-      }
+      return std::all_of(xi.begin(), xi.end(), within_range);
    }
    return true;
 }
