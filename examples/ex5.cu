@@ -21,7 +21,7 @@ __global__ void row_iota(TensorType A) {
 int main() {
    UnifiedMatrix<float> A(16, 8);
    row_iota<<<4, 4>>>(A.pass());
-   cudaDeviceSynchronize();
+   ASSERT_CUDA(cudaDeviceSynchronize());
    for(index_t i = 0; i < A.extent(0); ++i) {
       A(i, 0) = 777;
    }

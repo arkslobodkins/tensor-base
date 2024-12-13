@@ -26,7 +26,7 @@ __host__ __device__ bool same_extents(const TT1& A1, const TT2& A2, const TTArgs
          return false;
       }
    }
-   if constexpr(sizeof...(TensorTypes) == 0) {
+   if constexpr(sizeof...(TTArgs) == 0) {
       return true;
    } else {
       return same_extents(A2, AArgs...);
