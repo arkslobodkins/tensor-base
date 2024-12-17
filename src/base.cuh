@@ -49,9 +49,22 @@ __host__ __device__ constexpr bool same_memory_kind() {
 enum Scheme { Host, Device, Unified };
 
 
+namespace internal {
+
+
+struct BaseTag {};
+
+
+template <typename D>
+constexpr bool base_tag_v = std::is_base_of_v<BaseTag, D>;
+
+
+}  // namespace internal
+
+
 template <typename T, index_t dim, Scheme scheme, bool is_const_ptr = false,
           bool is_pinned_mem = false>
-class TensorBase {
+class TensorBase : protected internal::BaseTag {
 private:
    using Self = TensorBase<T, dim, scheme, is_const_ptr, is_pinned_mem>;
 

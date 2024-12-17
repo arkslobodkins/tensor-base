@@ -16,7 +16,9 @@ namespace tnb {
 
 
 template <typename TT,
-          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 1), bool>
+          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 1)
+                               && (internal::base_tag_v<TT>),
+                           bool>
           = true>
 __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
@@ -28,7 +30,9 @@ __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
 
 
 template <typename TT,
-          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 2), bool>
+          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 2)
+                               && (internal::base_tag_v<TT>),
+                           bool>
           = true>
 __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
@@ -39,7 +43,9 @@ __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
 
 
 template <typename TT,
-          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 3), bool>
+          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 3)
+                               && (internal::base_tag_v<TT>),
+                           bool>
           = true>
 __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
@@ -54,7 +60,9 @@ __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
 
 
 template <typename TT,
-          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 4), bool>
+          std::enable_if_t<(TT::is_host() || TT::is_unified()) && (TT::dimension() == 4)
+                               && (internal::base_tag_v<TT>),
+                           bool>
           = true>
 __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
    for(index_t i = 0; i < A.extent(0); ++i) {
@@ -73,7 +81,8 @@ __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
 }
 
 
-template <typename TT, std::enable_if_t<TT::is_device(), bool> = true>
+template <typename TT,
+          std::enable_if_t<TT::is_device() && (internal::base_tag_v<TT>), bool> = true>
 __host__ std::ostream& operator<<(std::ostream& os, const TT& A) {
    Tensor<ValueTypeOf<TT>, TT::dimension()> A_host(A.extents());
    A_host.copy(A);
