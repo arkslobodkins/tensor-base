@@ -215,7 +215,7 @@ public:
    }
 
 
-   __host__ [[nodiscard]] const auto pass() const {
+   __host__ [[nodiscard]] auto pass() const {
       return lblock(*this, 0, ext_[0] - 1L);
    }
 

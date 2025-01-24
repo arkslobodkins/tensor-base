@@ -56,7 +56,7 @@ __host__ void rand_uniform(Gen& gen, TT& A) {
 
 template <typename TT>
 __host__ void random_impl(TT&& A) {
-   using T = typename std::remove_reference_t<TT>;
+   using T = std::remove_reference_t<TT>;
 
    auto seed = internal::get_seed();
    curandGenerator_t gen;

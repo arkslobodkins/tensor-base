@@ -23,10 +23,10 @@ struct timer {
       start = std::chrono::high_resolution_clock::now();
    }
 
-   double wall_time() {
-      return double(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                        std::chrono::high_resolution_clock::now() - start)
-                        .count())
+   double wall_time() const {
+      return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   std::chrono::high_resolution_clock::now() - start)
+                .count())
            / 1.e9;
    }
 

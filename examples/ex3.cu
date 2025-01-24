@@ -34,7 +34,7 @@ __global__ void scale(TensorType A) {
 
 
 int main() {
-   const auto ext = Extents<4>(4, 2, 2, 2);
+   constexpr auto ext = Extents<4>(4, 2, 2, 2);
    Tensor<int, 4> A(ext), B(ext);
    CudaTensor<int, 4> A_gpu(ext), B_gpu(ext), C_gpu(ext);
 

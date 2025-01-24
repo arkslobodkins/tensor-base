@@ -242,7 +242,7 @@ public:
          return first * ext_.product_from(in_dim);
       } else {
          return first * ext_.product_from(in_dim - internal::sizeof_cast<Ints...>())
-              + this->offset_of<in_dim, Ints...>(indexes...);
+              + this->template offset_of<in_dim, Ints...>(indexes...);
       }
    }
 
@@ -293,7 +293,7 @@ public:
    }
 
 
-   __host__ void memset_async(int val, cudaStream_t stream = 0) {
+   __host__ void memset_async(int val, cudaStream_t stream = nullptr) {
       static_assert(!this->is_host());
       ASSERT_CUDA(cudaMemsetAsync(this->data(), val, this->size() * sizeof(T), stream));
    }
@@ -308,7 +308,7 @@ public:
 
 
    template <typename TT>
-   __host__ void copy_async(const TT& A, cudaStream_t stream = 0) {
+   __host__ void copy_async(const TT& A, cudaStream_t stream = nullptr) {
       // Host to host copy is not asynchronous.
       static_assert(!(this->is_host() && TT::is_host()));
       static_assert(std::is_same_v<value_type, ValueTypeOf<TT>>);

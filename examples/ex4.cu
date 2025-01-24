@@ -57,9 +57,9 @@ int main() {
          ASSERT_CUDA(cudaFreeAsync(xd[i], streams[i]));
       }
 
-      for(int i = 0; i < M; ++i) {
-         ASSERT_CUDA(cudaStreamSynchronize(streams[i]));
-         ASSERT_CUDA(cudaStreamDestroy(streams[i]));
+      for(auto & stream : streams) {
+         ASSERT_CUDA(cudaStreamSynchronize(stream));
+         ASSERT_CUDA(cudaStreamDestroy(stream));
       }
 
       assert(verify(x, scalars));
